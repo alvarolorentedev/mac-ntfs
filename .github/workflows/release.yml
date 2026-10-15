@@ -70,16 +70,6 @@ jobs:
           fi
           security find-identity -v -p codesigning | grep "Developer ID Application" | head -2
 
-      - name: Restore keychain list
-        if: always()
-        run: |
-          set -uo pipefail
-          if [ -f "$RUNNER_TEMP/keychains.txt" ]; then
-            security list-keychains -d user -s $(cat "$RUNNER_TEMP/keychains.txt") 2>/dev/null || true
-            rm -f "$RUNNER_TEMP/keychains.txt"
-          fi
-          security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
-
       - name: Write App Store Connect key
         env:
           ASC_P8_BASE64: ${{ secrets.ASC_KEY_P8 }}
@@ -119,3 +109,14 @@ jobs:
         with:
           files: build/installer/*.dmg
           generate_release_notes: true
+
+      - name: Restore keychain list
+        if: always()
+        run: |
+          set -uo pipefail
+          if [ -f "$RUNNER_TEMP/keychains.txt" ]; then
+            security list-keychains -d user -s $(cat "$RUNNER_TEMP/keychains.txt") 2>/dev/null || true
+            rm -f "$RUNNER_TEMP/keychains.txt"
+          fi
+          security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
+
