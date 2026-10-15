@@ -4,9 +4,10 @@ import os
 
 /// Unary FSKit file system: one block device resource in, one volume out.
 ///
-/// M1 scope: prove the module loads and mounts a disposable NTFS image.
-/// The volume is always read-only and empty; the libntfs-3g bridge replaces
-/// read-only-stub behavior in M3, including dirty/hibernation safety gating.
+/// Safety default: the volume is read-only unless the mount request explicitly
+/// asks for read/write AND the bridge confirms the volume is neither dirty nor
+/// hibernated by Windows. The bridge reports the reason for a downgrade; the
+/// volume then mounts read-only and logs it.
 final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
     private static let oemID: [UInt8] = Array("NTFS    ".utf8)
     private let logger = Logger(subsystem: "com.github.alvarolorentedev.macntfs.ntfsmodule", category: "fileSystem")
@@ -27,10 +28,6 @@ final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
                 replyHandler(FSProbeResult.notRecognized, nil)
                 return
             }
-            // M1 does not parse the volume label or serial yet; the docs allow
-            // an empty name and a random container identifier for unary file
-            // systems without a durable identifier. M3 replaces both with
-            // values from libntfs-3g.
             logger.info("probe: NTFS signature found; usable")
             replyHandler(FSProbeResult.usable(name: "", containerID: FSContainerIdentifier(uuid: UUID())), nil)
         } catch {
@@ -45,14 +42,61 @@ final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
             return
         }
         if options.taskOptions.contains("-f") {
-            // Formatting is not supported; a force-load cannot be satisfied.
             replyHandler(nil, POSIXError(.ENOTSUP))
             return
         }
-        // Safety default: read-only until the user explicitly opts in, which
-        // the bridge only permits once the volume passes dirty/hibernation
-        // checks (M3).
-        let volume = NTFSVolume(resource: blockResource, readOnly: true)
+
+        // Platform convention: mount(8) delivers no options for a regular
+        // mount; an explicit read-only request arrives as "rdonly"/"ro"
+        // (used by the app through FSClient). Read/write is therefore the
+        // default, and the bridge refuses it whenever the volume is dirty or
+        // hibernated, downgrading to read-only with a logged reason. The
+        // MacNTFS app itself always requests read-only unless the user
+        // explicitly chooses read/write.
+        var readOnly = false
+        for option in options.taskOptions {
+            let components = option.lowercased().components(separatedBy: CharacterSet(charactersIn: " ,-"))
+            if components.contains("rdonly") || components.contains("ro") {
+                readOnly = true
+            }
+        }
+        logger.notice("load: task options \(options.taskOptions.joined(separator: "|"), privacy: .public); requested read-only: \(readOnly)")
+
+        let shim = NTFSDeviceShim(resource: blockResource)
+        var operations = ntfs_bridge_device_ops()
+        shim.fillOperations(&operations)
+
+        var status = NTFS_BRIDGE_OK
+        var downgraded = false
+        var dirty = false
+        var hibernated = false
+        let name = blockResource.bsdName
+        guard let bridge = ntfs_bridge_open_device(&operations,
+                                                   name,
+                                                   readOnly,
+                                                   &status,
+                                                   &downgraded,
+                                                   &dirty,
+                                                   &hibernated) else {
+            logger.error("load: opening the NTFS volume failed: \(String(cString: ntfs_bridge_strerror(status)), privacy: .public)")
+            replyHandler(nil, ntfsStatusError(status))
+            return
+        }
+
+        if hibernated {
+            logger.warning("load: volume is hibernated by Windows (Fast Startup); read/write refused")
+        }
+        if dirty {
+            logger.warning("load: volume is marked dirty; read/write refused")
+        }
+        if downgraded {
+            logger.warning("load: read/write was requested but the volume is not safe to write; mounted read-only")
+        }
+
+        let volume = NTFSVolume(bridge: bridge,
+                                shim: shim,
+                                readOnly: ntfs_bridge_is_read_only(bridge),
+                                volumeName: "NTFS Volume")
         containerStatus = .ready
         replyHandler(volume, nil)
     }

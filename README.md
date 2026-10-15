@@ -3,11 +3,11 @@
 Open-source NTFS read/write for macOS using Apple's FSKit framework and the
 upstream ntfs-3g engine. No kernel extension, no macFUSE, no Reduced Security.
 
-Status: **M2 (engine proven)** — a signed FSKit module mounts a disposable NTFS
-image read-only (M1 gate passed on macOS 27.0.1), and the libntfs-3g bridge
-passes its engine tests: read/write/create/unlink/truncate round-trips, plus
-dirty-volume and hibernation safety gates. Read/write through Finder arrives
-with the FSKit volume mapping (M3).
+Status: **M3 (read/write mounted)** — the FSKit module mounts NTFS volumes on
+macOS 27.0.1 and serves real read/write traffic: create, write, rename, unlink,
+truncate, with content verified by SHA-256 across remounts. Dirty and
+hibernated volumes are refused read/write and mount read-only with a logged
+reason. The MacNTFS app defaults to read-only; see "Mount safety" below.
 
 ## Layout
 
@@ -91,10 +91,35 @@ raw image file and its BSD name is validated before use.
 ```
 
 Builds the bridge against the pinned static library and runs the engine suite on
-three fresh disposable images: a read/write cycle (create, write, sync, remount,
-verify, truncate, unlink, readdir), a dirty volume (read/write refused, falls
-back to read-only with the reason), and a hibernated volume (`hiberfil.sys`
-present). No FSKit and no physical devices involved.
+fresh disposable images: read/write cycles (create, write, sync, remount,
+verify, truncate, unlink, readdir, lookup, rename including overwrite, statfs),
+a dirty volume, and a hibernated volume. No FSKit and no physical devices
+involved.
+
+## M3 gate (mounted read/write validation)
+
+```sh
+./scripts/m3-mount-test.sh
+```
+
+Mounts disposable images through the real FSKit module and verifies: read/write
+cycle with SHA-256 content check across remounts; explicit read-only mount
+(`-o rdonly`) refuses writes; a dirty volume and a hibernated volume both fall
+back to read-only with writes refused, even though read/write was requested.
+
+## Mount safety
+
+- **MacNTFS app:** mounts read-only unless the user explicitly chooses
+  read/write for a specific volume.
+- **Dirty or hibernated volumes (Windows Fast Startup):** read/write is always
+  refused; the volume mounts read-only with the reason logged. This is enforced
+  in the bridge, not just in the UI.
+- **Platform convention:** `mount(8)` delivers no options for a regular mount;
+  the kernel enforces `-o rdonly` at the VFS layer. The module therefore treats
+  an option-less mount as read/write, and the session is still subject to the
+  safety gate above.
+- Unsupported operations (symbolic links, hard links, extended attributes) are
+  reported as `ENOTSUP` rather than silently accepted.
 
 ## License
 

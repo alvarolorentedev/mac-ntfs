@@ -1,14 +1,19 @@
 import Foundation
 import FSKit
 
-/// Opaque per-vnode object. FSKit hands one of these back to the volume for
-/// every item it tracks. M1 only ever creates the root item; M3 attaches the
-/// libntfs-3g node (MFT record number and in-memory state) to it.
+/// Opaque per-vnode object. Holds the NTFS MFT record number plus the cached
+/// path used by the path-based bridge operations (create/unlink/rename).
 final class NTFSItem: FSItem {
-    let name: FSFileName
+    let inode: UInt64
+    var parentInode: UInt64
+    var name: FSFileName
+    var path: String
     var attributes = FSItem.Attributes()
 
-    init(name: FSFileName) {
+    init(inode: UInt64, parentInode: UInt64, name: FSFileName, path: String) {
+        self.inode = inode
+        self.parentInode = parentInode
         self.name = name
+        self.path = path
     }
 }

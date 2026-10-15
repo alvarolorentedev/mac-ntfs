@@ -166,8 +166,6 @@ static void test_read_write_cycle(const char *image)
         CHECK(ntfs_bridge_read(bridge, "/dir/data.bin", 0, readback, 4096, &read_bytes) == NTFS_BRIDGE_OK,
               "read truncated");
         CHECK(memcmp(readback, pattern, 4096) == 0, "truncated prefix intact");
-        CHECK(ntfs_bridge_rename(bridge, "/a", "/b") == NTFS_BRIDGE_ERR_NOT_SUPPORTED,
-              "rename reported unsupported");
         CHECK(ntfs_bridge_close(bridge) == NTFS_BRIDGE_OK, "close verify");
     }
 
@@ -245,16 +243,143 @@ static void test_hibernated_volume(const char *image)
     }
 }
 
+static void test_lookup_rename_statfs(const char *image)
+{
+    printf("== lookup/rename/statfs (%s)\n", image);
+
+    ntfs_bridge *bridge = open_expect(image, false, false, false, false, "extra-open");
+    if (!bridge) {
+        return;
+    }
+
+    ntfs_bridge_volume_stats fs;
+    CHECK(ntfs_bridge_statfs(bridge, &fs) == NTFS_BRIDGE_OK, "statfs");
+    CHECK(fs.total_bytes > 0 && fs.free_bytes <= fs.total_bytes && fs.cluster_size > 0,
+          "statfs values sane");
+
+    const char *aaa = "AAA";
+    const char *bbbb = "BBBB";
+    size_t written = 0;
+    CHECK(ntfs_bridge_create(bridge, "/a.txt", false) == NTFS_BRIDGE_OK, "create a.txt");
+    CHECK(ntfs_bridge_write(bridge, "/a.txt", 0, aaa, 3, &written) == NTFS_BRIDGE_OK && written == 3,
+          "write a.txt");
+    CHECK(ntfs_bridge_create(bridge, "/b.txt", false) == NTFS_BRIDGE_OK, "create b.txt");
+    CHECK(ntfs_bridge_write(bridge, "/b.txt", 0, bbbb, 4, &written) == NTFS_BRIDGE_OK && written == 4,
+          "write b.txt");
+
+    uint64_t inode = 0;
+    ntfs_bridge_attrs attrs;
+    CHECK(ntfs_bridge_lookup(bridge, NTFS_BRIDGE_ROOT_INODE, "a.txt", &inode, &attrs) == NTFS_BRIDGE_OK,
+          "lookup a.txt");
+    CHECK(inode != 0 && attrs.size == 3 && !attrs.is_directory, "a.txt attrs");
+    uint64_t missing = 0;
+    CHECK(ntfs_bridge_lookup(bridge, NTFS_BRIDGE_ROOT_INODE, "missing.txt", &missing, &attrs) == NTFS_BRIDGE_ERR_NOT_FOUND,
+          "lookup missing returns not found");
+    CHECK(ntfs_bridge_lookup(bridge, NTFS_BRIDGE_ROOT_INODE, "bad/name", &missing, &attrs) == NTFS_BRIDGE_ERR_INVAL,
+          "lookup invalid component refused");
+
+    uint8_t buffer[8];
+    memset(buffer, 0, sizeof(buffer));
+    size_t got = 0;
+    CHECK(ntfs_bridge_read_inode(bridge, inode, 0, buffer, sizeof(buffer), &got) == NTFS_BRIDGE_OK,
+          "read_inode");
+    CHECK(got == 3 && memcmp(buffer, aaa, 3) == 0, "read_inode content");
+
+    CHECK(ntfs_bridge_rename(bridge, "/a.txt", "/c.txt") == NTFS_BRIDGE_OK, "rename a.txt to c.txt");
+    CHECK(ntfs_bridge_getattr(bridge, "/a.txt", &attrs) == NTFS_BRIDGE_ERR_NOT_FOUND, "a.txt gone");
+    CHECK(ntfs_bridge_getattr(bridge, "/c.txt", &attrs) == NTFS_BRIDGE_OK && attrs.size == 3, "c.txt present");
+
+    CHECK(ntfs_bridge_rename(bridge, "/c.txt", "/b.txt") == NTFS_BRIDGE_OK, "rename c.txt over b.txt");
+    CHECK(ntfs_bridge_getattr(bridge, "/c.txt", &attrs) == NTFS_BRIDGE_ERR_NOT_FOUND, "c.txt gone");
+    memset(buffer, 0, sizeof(buffer));
+    CHECK(ntfs_bridge_read(bridge, "/b.txt", 0, buffer, sizeof(buffer), &got) == NTFS_BRIDGE_OK,
+          "read overwritten b.txt");
+    CHECK(got == 3 && memcmp(buffer, aaa, 3) == 0, "overwritten b.txt contains AAA");
+
+    CHECK(ntfs_bridge_create(bridge, "/dir2", true) == NTFS_BRIDGE_OK, "create dir2");
+    CHECK(ntfs_bridge_rename(bridge, "/b.txt", "/dir2/moved.txt") == NTFS_BRIDGE_OK,
+          "rename into subdirectory");
+
+    struct list_context root = { .count = 0 };
+    CHECK(ntfs_bridge_readdir_inode(bridge, NTFS_BRIDGE_ROOT_INODE, collect_entry, &root) == NTFS_BRIDGE_OK,
+          "readdir_inode root");
+    CHECK(!list_contains(&root, "b.txt"), "b.txt left the root");
+    CHECK(list_contains(&root, "dir2"), "dir2 present in root");
+
+    CHECK(ntfs_bridge_rename(bridge, "/$MFT", "/x") == NTFS_BRIDGE_ERR_PERM, "metadata rename refused");
+
+    CHECK(ntfs_bridge_sync(bridge) == NTFS_BRIDGE_OK, "sync extra");
+    CHECK(ntfs_bridge_close(bridge) == NTFS_BRIDGE_OK, "close extra");
+
+    bridge = open_expect(image, true, false, false, false, "extra-ro");
+    if (bridge) {
+        uint64_t dir2_inode = 0;
+        CHECK(ntfs_bridge_lookup(bridge, NTFS_BRIDGE_ROOT_INODE, "dir2", &dir2_inode, &attrs) == NTFS_BRIDGE_OK,
+              "lookup dir2");
+        CHECK(attrs.is_directory, "dir2 is a directory");
+        CHECK(ntfs_bridge_lookup(bridge, dir2_inode, "moved.txt", &missing, &attrs) == NTFS_BRIDGE_OK,
+              "lookup moved.txt");
+        CHECK(attrs.size == 3, "moved.txt size");
+        CHECK(ntfs_bridge_close(bridge) == NTFS_BRIDGE_OK, "close extra ro");
+    }
+}
+
 int main(int argc, char **argv)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
-    if (argc != 4) {
-        fprintf(stderr, "usage: %s <image1> <image2-dirty> <image3-hibernated>\n", argv[0]);
+
+    /* Fixture modes used by scripts/m3-mount-test.sh. */
+    if (argc == 3 && strcmp(argv[1], "--make-dirty") == 0) {
+        ntfs_bridge_status status = NTFS_BRIDGE_ERR_IO;
+        bool downgraded = false, dirty = false, hibernated = false;
+        ntfs_bridge *bridge = ntfs_bridge_open(argv[2], false, &status, &downgraded, &dirty, &hibernated);
+        if (!bridge) {
+            fprintf(stderr, "cannot open %s: %s\n", argv[2], ntfs_bridge_strerror(status));
+            return 1;
+        }
+        ntfs_bridge_status mark = ntfs_bridge_test_mark_dirty(bridge);
+        ntfs_bridge_status close_status = ntfs_bridge_close(bridge);
+        if (mark != NTFS_BRIDGE_OK || close_status != NTFS_BRIDGE_OK) {
+            fprintf(stderr, "failed to mark dirty: %s\n", ntfs_bridge_strerror(mark));
+            return 1;
+        }
+        printf("marked dirty: %s\n", argv[2]);
+        return 0;
+    }
+    if (argc == 3 && strcmp(argv[1], "--make-hibernated") == 0) {
+        ntfs_bridge_status status = NTFS_BRIDGE_ERR_IO;
+        bool downgraded = false, dirty = false, hibernated = false;
+        ntfs_bridge *bridge = ntfs_bridge_open(argv[2], false, &status, &downgraded, &dirty, &hibernated);
+        if (!bridge) {
+            fprintf(stderr, "cannot open %s: %s\n", argv[2], ntfs_bridge_strerror(status));
+            return 1;
+        }
+        uint8_t header[4096];
+        memset(header, 0, sizeof(header));
+        memcpy(header, "hibr", 4);
+        size_t written = 0;
+        ntfs_bridge_status created = ntfs_bridge_create(bridge, "/hiberfil.sys", false);
+        ntfs_bridge_status wrote = created == NTFS_BRIDGE_OK
+            ? ntfs_bridge_write(bridge, "/hiberfil.sys", 0, header, sizeof(header), &written)
+            : created;
+        ntfs_bridge_status close_status = ntfs_bridge_close(bridge);
+        if (created != NTFS_BRIDGE_OK || wrote != NTFS_BRIDGE_OK || close_status != NTFS_BRIDGE_OK) {
+            fprintf(stderr, "failed to create hiberfil: %s\n", ntfs_bridge_strerror(wrote));
+            return 1;
+        }
+        printf("made hibernated: %s\n", argv[2]);
+        return 0;
+    }
+
+    if (argc != 5) {
+        fprintf(stderr, "usage: %s <image1> <image2-dirty> <image3-hibernated> <image4-extra>\n", argv[0]);
+        fprintf(stderr, "       %s --make-dirty|--make-hibernated <image>\n", argv[0]);
         return 2;
     }
     test_read_write_cycle(argv[1]);
     test_dirty_volume(argv[2]);
     test_hibernated_volume(argv[3]);
+    test_lookup_rename_statfs(argv[4]);
 
     printf("\n%d checks, %d failures\n", checks, failures);
     if (failures) {

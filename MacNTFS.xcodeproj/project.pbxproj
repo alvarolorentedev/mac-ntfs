@@ -15,6 +15,8 @@
 		0055 /* NTFSItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0045 /* NTFSItem.swift */; };
 		0056 /* NTFSModule.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0021 /* NTFSModule.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		0057 /* ModuleEnabler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0047 /* ModuleEnabler.swift */; };
+		0072 /* NTFSDeviceShim.m in Sources */ = {isa = PBXBuildFile; fileRef = 0063 /* NTFSDeviceShim.m */; };
+		0073 /* ntfs_bridge.c in Sources */ = {isa = PBXBuildFile; fileRef = 0066 /* ntfs_bridge.c */; };
 		0058 /* FSKitDaemonEnablement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0048 /* FSKitDaemonEnablement.swift */; };
 		0071 /* FSKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0070 /* FSKit.framework */; };
 /* End PBXBuildFile section */
@@ -57,6 +59,11 @@
 		0046 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0047 /* ModuleEnabler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModuleEnabler.swift; sourceTree = "<group>"; };
 		0048 /* FSKitDaemonEnablement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FSKitDaemonEnablement.swift; sourceTree = "<group>"; };
+		0062 /* NTFSDeviceShim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NTFSDeviceShim.h; sourceTree = "<group>"; };
+		0063 /* NTFSDeviceShim.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NTFSDeviceShim.m; sourceTree = "<group>"; };
+		0064 /* NTFSModule-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NTFSModule-Bridging-Header.h"; sourceTree = "<group>"; };
+		0065 /* ntfs_bridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ntfs_bridge.h; sourceTree = "<group>"; };
+		0066 /* ntfs_bridge.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ntfs_bridge.c; sourceTree = "<group>"; };
 		0070 /* FSKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FSKit.framework; path = System/Library/Frameworks/FSKit.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -84,6 +91,7 @@
 			children = (
 				0005 /* MacNTFS */,
 				0006 /* NTFSModule */,
+				0067 /* bridge */,
 				0007 /* Frameworks */,
 				0004 /* Products */,
 			);
@@ -117,10 +125,22 @@
 				0043 /* NTFSFileSystem.swift */,
 				0044 /* NTFSVolume.swift */,
 				0045 /* NTFSItem.swift */,
+				0062 /* NTFSDeviceShim.h */,
+				0063 /* NTFSDeviceShim.m */,
+				0064 /* NTFSModule-Bridging-Header.h */,
 				0046 /* Info.plist */,
 				0025 /* NTFSModule.entitlements */,
 			);
 			path = NTFSModule;
+			sourceTree = "<group>";
+		};
+		0067 /* bridge */ = {
+			isa = PBXGroup;
+			children = (
+				0065 /* ntfs_bridge.h */,
+				0066 /* ntfs_bridge.c */,
+			);
+			path = bridge;
 			sourceTree = "<group>";
 		};
 		0007 /* Frameworks */ = {
@@ -236,6 +256,8 @@
 				0053 /* NTFSFileSystem.swift in Sources */,
 				0054 /* NTFSVolume.swift in Sources */,
 				0055 /* NTFSItem.swift in Sources */,
+				0072 /* NTFSDeviceShim.m in Sources */,
+				0073 /* ntfs_bridge.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -354,6 +376,24 @@
 				CODE_SIGN_ENTITLEMENTS = NTFSModule/NTFSModule.entitlements;
 				PROVISIONING_PROFILE_SPECIFIER = "MacNTFS Extension Developer ID";
 				CURRENT_PROJECT_VERSION = 1;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"HAVE_CONFIG_H=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/build/src/ntfs-3g-2026.9.28",
+					"$(SRCROOT)/build/src/ntfs-3g-2026.9.28/include",
+					"$(SRCROOT)/build/src/ntfs-3g-2026.9.28/include/ntfs-3g",
+					"$(SRCROOT)/bridge",
+					"$(inherited)",
+				);
+				OTHER_LDFLAGS = (
+					"$(SRCROOT)/build/lib/libntfs-3g.a",
+					"-framework",
+					CoreFoundation,
+					"$(inherited)",
+				);
+				SWIFT_OBJC_BRIDGING_HEADER = "NTFSModule/NTFSModule-Bridging-Header.h";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NTFSModule/Info.plist;
@@ -376,6 +416,24 @@
 				CODE_SIGN_ENTITLEMENTS = NTFSModule/NTFSModule.entitlements;
 				PROVISIONING_PROFILE_SPECIFIER = "MacNTFS Extension Developer ID";
 				CURRENT_PROJECT_VERSION = 1;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"HAVE_CONFIG_H=1",
+					"$(inherited)",
+				);
+				HEADER_SEARCH_PATHS = (
+					"$(SRCROOT)/build/src/ntfs-3g-2026.9.28",
+					"$(SRCROOT)/build/src/ntfs-3g-2026.9.28/include",
+					"$(SRCROOT)/build/src/ntfs-3g-2026.9.28/include/ntfs-3g",
+					"$(SRCROOT)/bridge",
+					"$(inherited)",
+				);
+				OTHER_LDFLAGS = (
+					"$(SRCROOT)/build/lib/libntfs-3g.a",
+					"-framework",
+					CoreFoundation,
+					"$(inherited)",
+				);
+				SWIFT_OBJC_BRIDGING_HEADER = "NTFSModule/NTFSModule-Bridging-Header.h";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = NTFSModule/Info.plist;

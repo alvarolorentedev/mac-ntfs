@@ -35,9 +35,11 @@ echo "==> creating disposable images"
 "$REPO_ROOT/scripts/make-test-image.sh" 64 "$OUT/engine-cycle.img" >/dev/null
 "$REPO_ROOT/scripts/make-test-image.sh" 64 "$OUT/engine-dirty.img" >/dev/null
 "$REPO_ROOT/scripts/make-test-image.sh" 64 "$OUT/engine-hibernated.img" >/dev/null
+"$REPO_ROOT/scripts/make-test-image.sh" 64 "$OUT/engine-extra.img" >/dev/null
 
 echo "==> running engine tests"
 "$OUT/engine_tests" \
     "$OUT/engine-cycle.img" \
     "$OUT/engine-dirty.img" \
-    "$OUT/engine-hibernated.img"
+    "$OUT/engine-hibernated.img" \
+    "$OUT/engine-extra.img"
