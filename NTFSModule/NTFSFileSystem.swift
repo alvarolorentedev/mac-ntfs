@@ -11,6 +11,10 @@ import os
 final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
     private static let oemID: [UInt8] = Array("NTFS    ".utf8)
     private let logger = Logger(subsystem: "com.github.alvarolorentedev.macntfs.ntfsmodule", category: "fileSystem")
+    /// FSKit's check flow loads the resource before asking for a check and then
+    /// reuses the same container for the mount; keep the volume so the bridge
+    /// is opened exactly once per resource.
+    private var loadedVolume: NTFSVolume?
 
     func probeResource(resource: FSResource, replyHandler: @escaping (FSProbeResult?, (any Error)?) -> Void) {
         guard let blockResource = resource as? FSBlockDeviceResource else {
@@ -37,12 +41,24 @@ final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
     }
 
     func loadResource(resource: FSResource, options: FSTaskOptions, replyHandler: @escaping (FSVolume?, (any Error)?) -> Void) {
+        logger.notice("load: entered resource=\(String(describing: type(of: resource)), privacy: .public) options=\(options.taskOptions.joined(separator: "|"), privacy: .public)")
         guard let blockResource = resource as? FSBlockDeviceResource else {
+            logger.notice("load: rejected: resource is not a block device")
             replyHandler(nil, POSIXError(.EINVAL))
             return
         }
-        if options.taskOptions.contains("-f") {
-            replyHandler(nil, POSIXError(.ENOTSUP))
+        // "-f" arrives from the system's check task (a force-load context), not
+        // from a format request; formatting is refused separately in
+        // startFormat. Loads in that context stay read-only.
+        let forceLoad = options.taskOptions.contains("-f")
+        if let existing = loadedVolume {
+            logger.notice("load: reusing the volume already opened for this resource")
+            replyHandler(existing, nil)
+            return
+        }
+        if let existing = loadedVolume {
+            logger.notice("load: reusing the volume already opened for this resource")
+            replyHandler(existing, nil)
             return
         }
 
@@ -53,7 +69,7 @@ final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
         // hibernated, downgrading to read-only with a logged reason. The
         // MacNTFS app itself always requests read-only unless the user
         // explicitly chooses read/write.
-        var readOnly = false
+        var readOnly = forceLoad
         for option in options.taskOptions {
             let components = option.lowercased().components(separatedBy: CharacterSet(charactersIn: " ,-"))
             if components.contains("rdonly") || components.contains("ro") {
@@ -97,15 +113,52 @@ final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
                                 shim: shim,
                                 readOnly: ntfs_bridge_is_read_only(bridge),
                                 volumeName: "NTFS Volume")
+        loadedVolume = volume
         containerStatus = .ready
         replyHandler(volume, nil)
     }
 
     func unloadResource(resource: FSResource, options: FSTaskOptions, replyHandler reply: @escaping ((any Error)?) -> Void) {
+        // The volume closes its bridge in deactivateVolume; release the
+        // reference so a later load can open the resource again.
+        loadedVolume = nil
         reply(nil)
     }
 
     func didFinishLoading() {
         logger.debug("extension finished loading")
+    }
+}
+
+/// Read-only maintenance preflight. The system refuses to mount FSKit block
+/// device file systems until a check succeeds; this check is deliberately
+/// limited to confirming that the volume opened (which loadResource already
+/// established) and it never repairs or writes anything.
+extension NTFSFileSystem: FSManageableResourceMaintenanceOperations {
+    func startCheck(task: FSTask, options: FSTaskOptions) throws -> Progress {
+        let joinedOptions = options.taskOptions.joined(separator: " ").lowercased()
+        if joinedOptions.contains("y") {
+            let message = "MacNTFS does not repair NTFS volumes; use Windows chkdsk for repairs. No changes were made."
+            task.logMessage(message)
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(ENOTSUP),
+                          userInfo: [NSLocalizedDescriptionKey: message])
+        }
+        guard loadedVolume != nil else {
+            let message = "MacNTFS preflight found no loaded volume for this resource."
+            task.logMessage(message)
+            throw NSError(domain: NSPOSIXErrorDomain, code: Int(ENXIO))
+        }
+        task.logMessage("MacNTFS preflight: the NTFS volume opened successfully. Read-only verification only; no repairs or disk writes were performed.")
+        let progress = Progress(totalUnitCount: 1)
+        progress.completedUnitCount = 1
+        task.didComplete(error: nil)
+        return progress
+    }
+
+    func startFormat(task: FSTask, options: FSTaskOptions) throws -> Progress {
+        let message = "MacNTFS never formats NTFS volumes."
+        task.logMessage(message)
+        throw NSError(domain: NSPOSIXErrorDomain, code: Int(ENOTSUP),
+                      userInfo: [NSLocalizedDescriptionKey: message])
     }
 }

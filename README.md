@@ -114,10 +114,10 @@ Use: the menu bar lists every NTFS volume Disk Arbitration reports.
 - **Copy Diagnostics** — writes a report to
   `~/Library/Application Support/MacNTFS/` and copies it to the clipboard.
 
-Volumes mounted by the app live under `~/Library/MacNTFS/Volumes/<name>`:
-Disk Arbitration's own mount path currently refuses third-party FSKit modules
-(status ENOPROTOOPT on macOS 27), so the app uses the validated `mount -F`
-path with a user-owned mount point.
+The app mounts through Disk Arbitration, so volumes appear under `/Volumes`
+like any other disk (read-only unless you choose otherwise). If Disk
+Arbitration refuses, it falls back to the validated `mount -F` path with a
+user-owned mount point under `~/Library/MacNTFS/Volumes/`.
 
 Uninstall:
 
@@ -166,8 +166,8 @@ for troubleshooting symptoms and causes.
   uniform mode bits are reported and ownership is ignored (`noowners`).
 - **Symlinks, hard links, extended attributes/resource forks**: reported as
   unsupported (ENOTSUP). Windows junctions appear as plain entries.
-- **Mount point location**: `~/Library/MacNTFS/Volumes/<name>` (see above);
-  mounting into `/Volumes` requires root.
+- **Mount location**: via Disk Arbitration the system picks `/Volumes/<name>`;
+  the fallback path uses `~/Library/MacNTFS/Volumes/<name>`.
 - **One volume per resource** (FSKit unary design, matching NTFS semantics).
 - Stale extension processes can linger after unmounts during development;
   `pkill -9 -f NTFSModule.appex` before rebuilding.

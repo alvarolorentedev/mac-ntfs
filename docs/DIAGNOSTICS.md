@@ -34,7 +34,21 @@ Symptoms observed while building and using MacNTFS, with causes and actions.
 - **Action:** follow "Signing" in the README (App Store Connect API key →
   `create-dev-id-profiles.sh` → `build-signed.sh`).
 
-## Mount through Disk Arbitration fails with ENOPROTOOPT
+## Mount through Disk Arbitration fails with ENOPROTOOPT (0xC05C)
+
+- **Cause (fixed):** the system refuses to mount FSKit block-device file
+  systems until a maintenance check succeeds
+  (`FSManageableResourceMaintenanceOperations.startCheck`). The check task
+  also calls `loadResource` with the `-f` option — treating `-f` as a format
+  request and rejecting it aborts every system-initiated mount.
+- **Fix:** the module implements the read-only preflight check and accepts
+  `-f` as a check/force-load context (formatting is still refused in
+  `startFormat`). Regression-covered by `scripts/m4-mount-test.sh`.
+- **Symptom if it regresses:** `diskutil mount` and Disk Utility report the
+  volume "failed to mount", and `diskarbitrationd` logs
+  `FSKit check of resource exited with error ... Code=45` followed by
+  `disk mount ... status = 0x0000C05C`.
+
 
 - **Cause:** on macOS 27, Disk Arbitration's mount path refuses third-party
   FSKit modules (status 49244/ENOPROTOOPT). This is why the app mounts through

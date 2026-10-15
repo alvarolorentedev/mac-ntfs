@@ -54,7 +54,20 @@ else
     fail "volume $BSD not listed by --list-volumes"
 fi
 
-note "2. mount read-only (default action) and write refusal"
+note "2. system mount path (FSKit maintenance check regression)"
+if diskutil mount readOnly "$DEV" >/dev/null 2>&1; then
+    sleep 1
+    if mount | grep -q "${DEV#/dev/}"; then
+        pass "diskutil readOnly mount works (system check path)"
+    else
+        fail "diskutil reported success but nothing is mounted"
+    fi
+    diskutil unmount "$DEV" >/dev/null 2>&1 || fail "diskutil unmount failed"
+else
+    fail "diskutil readOnly mount failed (FSKit check regression)"
+fi
+
+note "3. mount read-only (default action) and write refusal"
 MOUNT_POINT="$("$APP" --mount "$BSD" 2>/tmp/m4-mount-err.txt)"
 if [ -n "$MOUNT_POINT" ] && mount | grep -q -- "$MOUNT_POINT"; then
     pass "mounted at $MOUNT_POINT"
@@ -78,7 +91,7 @@ else
     fail "unmount failed"
 fi
 
-note "3. mount read/write, write and read back"
+note "4. mount read/write, write and read back"
 MOUNT_POINT="$("$APP" --mount "$BSD" --rw 2>/tmp/m4-mount-err.txt)"
 if [ -n "$MOUNT_POINT" ] && mount | grep -q -- "$MOUNT_POINT"; then
     if mount | grep -- "$MOUNT_POINT" | grep -q "read-only"; then
@@ -96,7 +109,7 @@ else
 fi
 "$APP" --unmount "$BSD" >/dev/null 2>&1 || fail "unmount after writes failed"
 
-note "4. read-only remount verifies persistence"
+note "5. read-only remount verifies persistence"
 MOUNT_POINT="$("$APP" --mount "$BSD" 2>/dev/null)"
 if [ -f "$MOUNT_POINT/cli-note.txt" ] && [ "$(cat "$MOUNT_POINT/cli-note.txt")" = "macntfs" ]; then
     pass "file persisted across remount"
@@ -111,7 +124,7 @@ else
 fi
 "$APP" --unmount "$BSD" >/dev/null 2>&1 || fail "unmount before eject failed"
 
-note "5. eject"
+note "6. eject"
 if "$APP" --eject "$BSD" >/dev/null 2>&1; then
     sleep 1
     if "$APP" --list-volumes | grep -q "^$BSD	"; then
@@ -124,7 +137,7 @@ else
     fail "eject failed"
 fi
 
-note "6. diagnostics export"
+note "7. diagnostics export"
 DIAG="$OUT/m4-diagnostics.txt"
 if "$APP" --diagnostics "$DIAG" >/dev/null 2>&1 && grep -q "detected NTFS volumes" "$DIAG"; then
     pass "diagnostics written to $DIAG"
