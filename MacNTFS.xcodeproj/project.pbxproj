@@ -1,0 +1,428 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0050 /* MacNTFSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0040 /* MacNTFSApp.swift */; };
+		0051 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0041 /* ContentView.swift */; };
+		0052 /* NTFSModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0042 /* NTFSModule.swift */; };
+		0053 /* NTFSFileSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0043 /* NTFSFileSystem.swift */; };
+		0054 /* NTFSVolume.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0044 /* NTFSVolume.swift */; };
+		0055 /* NTFSItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0045 /* NTFSItem.swift */; };
+		0056 /* NTFSModule.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0021 /* NTFSModule.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		0057 /* ModuleEnabler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0047 /* ModuleEnabler.swift */; };
+		0058 /* FSKitDaemonEnablement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0048 /* FSKitDaemonEnablement.swift */; };
+		0071 /* FSKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0070 /* FSKit.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		0061 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0002 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 0020;
+			remoteInfo = NTFSModule;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		0015 /* Embed ExtensionKit Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
+			dstSubfolderSpec = 16;
+			files = (
+				0056 /* NTFSModule.appex in Embed ExtensionKit Extensions */,
+			);
+			name = "Embed ExtensionKit Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0011 /* MacNTFS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacNTFS.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0016 /* MacNTFS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacNTFS.entitlements; sourceTree = "<group>"; };
+		0021 /* NTFSModule.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = NTFSModule.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0025 /* NTFSModule.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NTFSModule.entitlements; sourceTree = "<group>"; };
+		0040 /* MacNTFSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacNTFSApp.swift; sourceTree = "<group>"; };
+		0041 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		0042 /* NTFSModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NTFSModule.swift; sourceTree = "<group>"; };
+		0043 /* NTFSFileSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NTFSFileSystem.swift; sourceTree = "<group>"; };
+		0044 /* NTFSVolume.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NTFSVolume.swift; sourceTree = "<group>"; };
+		0045 /* NTFSItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NTFSItem.swift; sourceTree = "<group>"; };
+		0046 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		0047 /* ModuleEnabler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModuleEnabler.swift; sourceTree = "<group>"; };
+		0048 /* FSKitDaemonEnablement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FSKitDaemonEnablement.swift; sourceTree = "<group>"; };
+		0070 /* FSKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FSKit.framework; path = System/Library/Frameworks/FSKit.framework; sourceTree = SDKROOT; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		0013 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0023 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0071 /* FSKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		0003 = {
+			isa = PBXGroup;
+			children = (
+				0005 /* MacNTFS */,
+				0006 /* NTFSModule */,
+				0007 /* Frameworks */,
+				0004 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		0004 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				0011 /* MacNTFS.app */,
+				0021 /* NTFSModule.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		0005 /* MacNTFS */ = {
+			isa = PBXGroup;
+			children = (
+				0040 /* MacNTFSApp.swift */,
+				0041 /* ContentView.swift */,
+				0047 /* ModuleEnabler.swift */,
+				0048 /* FSKitDaemonEnablement.swift */,
+				0016 /* MacNTFS.entitlements */,
+			);
+			path = MacNTFS;
+			sourceTree = "<group>";
+		};
+		0006 /* NTFSModule */ = {
+			isa = PBXGroup;
+			children = (
+				0042 /* NTFSModule.swift */,
+				0043 /* NTFSFileSystem.swift */,
+				0044 /* NTFSVolume.swift */,
+				0045 /* NTFSItem.swift */,
+				0046 /* Info.plist */,
+				0025 /* NTFSModule.entitlements */,
+			);
+			path = NTFSModule;
+			sourceTree = "<group>";
+		};
+		0007 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0070 /* FSKit.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0010 /* MacNTFS */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0037 /* Build configuration list for PBXNativeTarget "MacNTFS" */;
+			buildPhases = (
+				0012 /* Sources */,
+				0013 /* Frameworks */,
+				0014 /* Resources */,
+				0015 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				0060 /* PBXTargetDependency */,
+			);
+			name = MacNTFS;
+			productName = MacNTFS;
+			productReference = 0011 /* MacNTFS.app */;
+			productType = "com.apple.product-type.application";
+		};
+		0020 /* NTFSModule */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0038 /* Build configuration list for PBXNativeTarget "NTFSModule" */;
+			buildPhases = (
+				0022 /* Sources */,
+				0023 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NTFSModule;
+			productName = NTFSModule;
+			productReference = 0021 /* NTFSModule.appex */;
+			productType = "com.apple.product-type.extensionkit-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0002 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2700;
+				LastUpgradeCheck = 2700;
+				TargetAttributes = {
+					0010 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+					0020 = {
+						CreatedOnToolsVersion = 27.0;
+					};
+				};
+			};
+			buildConfigurationList = 0036 /* Build configuration list for PBXProject "MacNTFS" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 0003;
+			productRefGroup = 0004 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				0010 /* MacNTFS */,
+				0020 /* NTFSModule */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		0014 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0012 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0050 /* MacNTFSApp.swift in Sources */,
+				0051 /* ContentView.swift in Sources */,
+				0057 /* ModuleEnabler.swift in Sources */,
+				0058 /* FSKitDaemonEnablement.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		0022 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0052 /* NTFSModule.swift in Sources */,
+				0053 /* NTFSFileSystem.swift in Sources */,
+				0054 /* NTFSVolume.swift in Sources */,
+				0055 /* NTFSItem.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		0060 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 0020 /* NTFSModule */;
+			targetProxy = 0061 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0030 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = D8UFJKPSQP;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		0031 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = D8UFJKPSQP;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		0032 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MacNTFS/MacNTFS.entitlements;
+				PROVISIONING_PROFILE_SPECIFIER = "MacNTFS App Developer ID";
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MacNTFS;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.github.alvarolorentedev.macntfs;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+		0033 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = MacNTFS/MacNTFS.entitlements;
+				PROVISIONING_PROFILE_SPECIFIER = "MacNTFS App Developer ID";
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = MacNTFS;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.github.alvarolorentedev.macntfs;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
+		0034 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = NTFSModule/NTFSModule.entitlements;
+				PROVISIONING_PROFILE_SPECIFIER = "MacNTFS Extension Developer ID";
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NTFSModule/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.github.alvarolorentedev.macntfs.ntfsmodule;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Debug;
+		};
+		0035 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = NTFSModule/NTFSModule.entitlements;
+				PROVISIONING_PROFILE_SPECIFIER = "MacNTFS Extension Developer ID";
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_HARDENED_RUNTIME = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = NTFSModule/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@executable_path/../../../../Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.github.alvarolorentedev.macntfs.ntfsmodule;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0036 /* Build configuration list for PBXProject "MacNTFS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0030 /* Debug */,
+				0031 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0037 /* Build configuration list for PBXNativeTarget "MacNTFS" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0032 /* Debug */,
+				0033 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		0038 /* Build configuration list for PBXNativeTarget "NTFSModule" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0034 /* Debug */,
+				0035 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 0002 /* Project object */;
+}
