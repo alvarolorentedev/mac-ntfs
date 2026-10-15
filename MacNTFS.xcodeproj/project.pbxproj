@@ -8,13 +8,18 @@
 
 /* Begin PBXBuildFile section */
 		0050 /* MacNTFSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0040 /* MacNTFSApp.swift */; };
-		0051 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0041 /* ContentView.swift */; };
 		0052 /* NTFSModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0042 /* NTFSModule.swift */; };
 		0053 /* NTFSFileSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0043 /* NTFSFileSystem.swift */; };
 		0054 /* NTFSVolume.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0044 /* NTFSVolume.swift */; };
 		0055 /* NTFSItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0045 /* NTFSItem.swift */; };
 		0056 /* NTFSModule.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0021 /* NTFSModule.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		0057 /* ModuleEnabler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0047 /* ModuleEnabler.swift */; };
+		0086 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0080 /* AppModel.swift */; };
+		0087 /* DiskArbitrationMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0081 /* DiskArbitrationMonitor.swift */; };
+		0088 /* MountService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0082 /* MountService.swift */; };
+		0089 /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0083 /* Diagnostics.swift */; };
+		0090 /* MenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0084 /* MenuView.swift */; };
+		0091 /* CLI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0085 /* CLI.swift */; };
 		0072 /* NTFSDeviceShim.m in Sources */ = {isa = PBXBuildFile; fileRef = 0063 /* NTFSDeviceShim.m */; };
 		0073 /* ntfs_bridge.c in Sources */ = {isa = PBXBuildFile; fileRef = 0066 /* ntfs_bridge.c */; };
 		0058 /* FSKitDaemonEnablement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0048 /* FSKitDaemonEnablement.swift */; };
@@ -51,13 +56,18 @@
 		0021 /* NTFSModule.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = NTFSModule.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		0025 /* NTFSModule.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NTFSModule.entitlements; sourceTree = "<group>"; };
 		0040 /* MacNTFSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacNTFSApp.swift; sourceTree = "<group>"; };
-		0041 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		0042 /* NTFSModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NTFSModule.swift; sourceTree = "<group>"; };
 		0043 /* NTFSFileSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NTFSFileSystem.swift; sourceTree = "<group>"; };
 		0044 /* NTFSVolume.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NTFSVolume.swift; sourceTree = "<group>"; };
 		0045 /* NTFSItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NTFSItem.swift; sourceTree = "<group>"; };
 		0046 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0047 /* ModuleEnabler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModuleEnabler.swift; sourceTree = "<group>"; };
+		0080 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		0081 /* DiskArbitrationMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiskArbitrationMonitor.swift; sourceTree = "<group>"; };
+		0082 /* MountService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MountService.swift; sourceTree = "<group>"; };
+		0083 /* Diagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagnostics.swift; sourceTree = "<group>"; };
+		0084 /* MenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuView.swift; sourceTree = "<group>"; };
+		0085 /* CLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLI.swift; sourceTree = "<group>"; };
 		0048 /* FSKitDaemonEnablement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FSKitDaemonEnablement.swift; sourceTree = "<group>"; };
 		0062 /* NTFSDeviceShim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NTFSDeviceShim.h; sourceTree = "<group>"; };
 		0063 /* NTFSDeviceShim.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NTFSDeviceShim.m; sourceTree = "<group>"; };
@@ -110,8 +120,13 @@
 			isa = PBXGroup;
 			children = (
 				0040 /* MacNTFSApp.swift */,
-				0041 /* ContentView.swift */,
+				0080 /* AppModel.swift */,
+				0081 /* DiskArbitrationMonitor.swift */,
+				0082 /* MountService.swift */,
+				0083 /* Diagnostics.swift */,
+				0084 /* MenuView.swift */,
 				0047 /* ModuleEnabler.swift */,
+				0085 /* CLI.swift */,
 				0048 /* FSKitDaemonEnablement.swift */,
 				0016 /* MacNTFS.entitlements */,
 			);
@@ -242,8 +257,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				0050 /* MacNTFSApp.swift in Sources */,
-				0051 /* ContentView.swift in Sources */,
 				0057 /* ModuleEnabler.swift in Sources */,
+				0086 /* AppModel.swift in Sources */,
+				0087 /* DiskArbitrationMonitor.swift in Sources */,
+				0088 /* MountService.swift in Sources */,
+				0089 /* Diagnostics.swift in Sources */,
+				0090 /* MenuView.swift in Sources */,
+				0091 /* CLI.swift in Sources */,
 				0058 /* FSKitDaemonEnablement.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
