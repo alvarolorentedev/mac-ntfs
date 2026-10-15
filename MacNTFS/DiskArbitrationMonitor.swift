@@ -57,12 +57,13 @@ final class DiskArbitrationMonitor {
 
     private func enumerateVolumes() -> [NTFSVolumeInfo] {
         let deviceNames = (try? FileManager.default.contentsOfDirectory(atPath: "/dev")) ?? []
+        let mounts = mountTable()
         var result: [NTFSVolumeInfo] = []
         for entry in deviceNames where entry.hasPrefix("disk") && !entry.hasPrefix("rdisk") {
             guard entry.range(of: "^disk[0-9]+(s[0-9]+)?$", options: .regularExpression) != nil else {
                 continue
             }
-            if let info = describe(bsdName: entry) {
+            if let info = describe(bsdName: entry, mounts: mounts) {
                 result.append(info)
             }
         }
@@ -99,7 +100,7 @@ final class DiskArbitrationMonitor {
         return result
     }
 
-    private func describe(bsdName: String) -> NTFSVolumeInfo? {
+    private func describe(bsdName: String, mounts: [String: (path: String, readOnly: Bool)]) -> NTFSVolumeInfo? {
         guard let disk = DADiskCreateFromBSDName(kCFAllocatorDefault, session, bsdName),
               let rawDescription = DADiskCopyDescription(disk) else {
             return nil
@@ -112,7 +113,7 @@ final class DiskArbitrationMonitor {
         let volumeName = description[kDADiskDescriptionVolumeNameKey as String] as? String
         var mountPoint: String?
         var writable = false
-        if let tableEntry = mountTable()["/dev/\(bsdName)"] {
+        if let tableEntry = mounts["/dev/\(bsdName)"] {
             mountPoint = tableEntry.path
             writable = !tableEntry.readOnly
         } else if let url = description[kDADiskDescriptionVolumePathKey as String] as? URL {

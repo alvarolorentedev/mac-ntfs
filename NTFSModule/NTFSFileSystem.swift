@@ -13,8 +13,9 @@ final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
     private let logger = Logger(subsystem: "com.github.alvarolorentedev.macntfs.ntfsmodule", category: "fileSystem")
     /// FSKit's check flow loads the resource before asking for a check and then
     /// reuses the same container for the mount; keep the volume so the bridge
-    /// is opened exactly once per resource.
-    private var loadedVolume: NTFSVolume?
+    /// is opened exactly once per resource. Keyed on the resource: a second
+    /// disk must never be handed the first disk's volume.
+    private var volumesByResource: [ObjectIdentifier: NTFSVolume] = [:]
 
     func probeResource(resource: FSResource, replyHandler: @escaping (FSProbeResult?, (any Error)?) -> Void) {
         guard let blockResource = resource as? FSBlockDeviceResource else {
@@ -23,9 +24,12 @@ final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
             return
         }
         do {
-            var sector = [UInt8](repeating: 0, count: 512)
+            // 4Kn devices reject sub-block reads; the boot sector is in the
+            // first logical block on any geometry.
+            let readLength = max(512, Int(blockResource.blockSize))
+            var sector = [UInt8](repeating: 0, count: readLength)
             let readCount = try sector.withUnsafeMutableBytes { buffer in
-                try blockResource.read(into: buffer, startingAt: 0, length: 512)
+                try blockResource.read(into: buffer, startingAt: 0, length: readLength)
             }
             guard readCount >= 11, Array(sector[3..<11]) == Self.oemID else {
                 logger.debug("probe: NTFS OEM ID not present; not recognized")
@@ -51,12 +55,7 @@ final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
         // from a format request; formatting is refused separately in
         // startFormat. Loads in that context stay read-only.
         let forceLoad = options.taskOptions.contains("-f")
-        if let existing = loadedVolume {
-            logger.notice("load: reusing the volume already opened for this resource")
-            replyHandler(existing, nil)
-            return
-        }
-        if let existing = loadedVolume {
+        if let existing = volumesByResource[ObjectIdentifier(resource)], existing.hasOpenBridge {
             logger.notice("load: reusing the volume already opened for this resource")
             replyHandler(existing, nil)
             return
@@ -109,19 +108,20 @@ final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
             logger.warning("load: read/write was requested but the volume is not safe to write; mounted read-only")
         }
 
+        let label = ntfs_bridge_volume_name(bridge).map { String(cString: $0) } ?? ""
         let volume = NTFSVolume(bridge: bridge,
                                 shim: shim,
                                 readOnly: ntfs_bridge_is_read_only(bridge),
-                                volumeName: "NTFS Volume")
-        loadedVolume = volume
+                                volumeName: label.isEmpty ? "NTFS Volume" : label)
+        volumesByResource[ObjectIdentifier(resource)] = volume
         containerStatus = .ready
         replyHandler(volume, nil)
     }
 
     func unloadResource(resource: FSResource, options: FSTaskOptions, replyHandler reply: @escaping ((any Error)?) -> Void) {
-        // The volume closes its bridge in deactivateVolume; release the
-        // reference so a later load can open the resource again.
-        loadedVolume = nil
+        // The volume closes its bridge in deactivateVolume; close here too so
+        // an unload without deactivation cannot leak the open volume.
+        volumesByResource.removeValue(forKey: ObjectIdentifier(resource))?.closeBridge()
         reply(nil)
     }
 
@@ -143,7 +143,7 @@ extension NTFSFileSystem: FSManageableResourceMaintenanceOperations {
             throw NSError(domain: NSPOSIXErrorDomain, code: Int(ENOTSUP),
                           userInfo: [NSLocalizedDescriptionKey: message])
         }
-        guard loadedVolume != nil else {
+        guard !volumesByResource.isEmpty else {
             let message = "MacNTFS preflight found no loaded volume for this resource."
             task.logMessage(message)
             throw NSError(domain: NSPOSIXErrorDomain, code: Int(ENXIO))

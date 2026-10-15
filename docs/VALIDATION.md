@@ -10,7 +10,7 @@ Run in order; each step must pass before the next.
 
 ```sh
 ./scripts/build-libntfs.sh          # [ ] SHA-256 verified, no FUSE linked
-./scripts/run-engine-tests.sh       # [ ] "ENGINE TESTS: PASSED" (154 checks)
+./scripts/run-engine-tests.sh       # [ ] "ENGINE TESTS: PASSED" (179 checks)
 ./scripts/create-dev-id-profiles.sh # [ ] both .provisionprofile written
 ./scripts/build-signed.sh           # [ ] BUILD SUCCEEDED, "entitlements OK"
 ./scripts/make-installer.sh         # [ ] DMG notarized ("Accepted"), stapled, spctl accepted
@@ -27,7 +27,9 @@ Between rebuilds, kill stale extension processes:
 ### What each gate proves
 
 - **engine tests** — bridge correctness without FSKit: read/write cycles,
-  truncate, unlink, readdir, lookup, rename (including overwrite), statfs,
+  truncate, unlink, readdir (cookies/resume), lookup, rename (including
+  overwrite and into subdirectories), statfs, WIN32-namespaced names,
+  case-insensitive lookups, case-preserving listings, timestamp updates,
   dirty-volume refusal, hibernation refusal, read-only enforcement.
 - **M1 gate** — the signed module loads, probes the NTFS boot sector and mounts
   a disposable image.

@@ -79,6 +79,23 @@ static bool list_contains(const struct list_context *list, const char *name)
     return false;
 }
 
+struct cookie_context {
+    char names[2][256];
+    uint64_t cookies[2];
+    int count;
+};
+
+static bool collect_cookie(void *context, const ntfs_bridge_dirent *entry)
+{
+    struct cookie_context *cookies = context;
+    if (cookies->count < 2) {
+        snprintf(cookies->names[cookies->count], sizeof(cookies->names[0]), "%s", entry->name);
+        cookies->cookies[cookies->count] = entry->cookie;
+    }
+    cookies->count++;
+    return true;
+}
+
 static void test_read_write_cycle(const char *image)
 {
     printf("== read/write cycle (%s)\n", image);
@@ -141,12 +158,12 @@ static void test_read_write_cycle(const char *image)
     CHECK(!attrs.is_directory, "data.bin is not a directory");
 
     struct list_context root = { .count = 0 };
-    CHECK(ntfs_bridge_readdir(bridge, "/", collect_entry, &root) == NTFS_BRIDGE_OK, "readdir /");
+    CHECK(ntfs_bridge_readdir(bridge, "/", 0, collect_entry, &root) == NTFS_BRIDGE_OK, "readdir /");
     CHECK(list_contains(&root, "hello.txt"), "root lists hello.txt");
     CHECK(list_contains(&root, "dir"), "root lists dir");
 
     struct list_context sub = { .count = 0 };
-    CHECK(ntfs_bridge_readdir(bridge, "/dir", collect_entry, &sub) == NTFS_BRIDGE_OK, "readdir /dir");
+    CHECK(ntfs_bridge_readdir(bridge, "/dir", 0, collect_entry, &sub) == NTFS_BRIDGE_OK, "readdir /dir");
     CHECK(list_contains(&sub, "data.bin"), "dir lists data.bin");
 
     CHECK(ntfs_bridge_close(bridge) == NTFS_BRIDGE_OK, "close ro");
@@ -301,7 +318,7 @@ static void test_lookup_rename_statfs(const char *image)
           "rename into subdirectory");
 
     struct list_context root = { .count = 0 };
-    CHECK(ntfs_bridge_readdir_inode(bridge, NTFS_BRIDGE_ROOT_INODE, collect_entry, &root) == NTFS_BRIDGE_OK,
+    CHECK(ntfs_bridge_readdir_inode(bridge, NTFS_BRIDGE_ROOT_INODE, 0, collect_entry, &root) == NTFS_BRIDGE_OK,
           "readdir_inode root");
     CHECK(!list_contains(&root, "b.txt"), "b.txt left the root");
     CHECK(list_contains(&root, "dir2"), "dir2 present in root");
@@ -322,6 +339,58 @@ static void test_lookup_rename_statfs(const char *image)
         CHECK(attrs.size == 3, "moved.txt size");
         CHECK(ntfs_bridge_close(bridge) == NTFS_BRIDGE_OK, "close extra ro");
     }
+}
+
+static void test_windows_names_case_and_cookies(const char *image)
+{
+    printf("== Windows namespaces, case and cookies (%s)\n", image);
+    ntfs_bridge *bridge = open_expect(image, false, false, false, false, "win-open");
+    if (!bridge) {
+        return;
+    }
+
+    const char *label = ntfs_bridge_volume_name(bridge);
+    CHECK(label && strcmp(label, "MacNTFSTest") == 0, "volume label is reported (%s)",
+          label ? label : "(null)");
+
+    CHECK(ntfs_bridge_create(bridge, "/MiXeD.txt", false) == NTFS_BRIDGE_OK, "create MiXeD.txt");
+    CHECK(ntfs_bridge_create(bridge, "/Windows.txt", false) == NTFS_BRIDGE_OK, "create Windows.txt");
+    CHECK(ntfs_bridge_test_set_win32_namespace(bridge, "/Windows.txt") == NTFS_BRIDGE_OK,
+          "rewrite Windows.txt as a WIN32-namespaced name");
+
+    struct list_context list = { .count = 0 };
+    CHECK(ntfs_bridge_readdir(bridge, "/", 0, collect_entry, &list) == NTFS_BRIDGE_OK, "readdir root");
+    CHECK(list_contains(&list, "Windows.txt"), "WIN32-namespaced file is listed");
+    CHECK(list_contains(&list, "MiXeD.txt"), "listing keeps the stored case");
+    CHECK(!list_contains(&list, "mixed.txt"), "listing is not lowercased");
+
+    uint64_t inode = 0;
+    ntfs_bridge_attrs attrs;
+    CHECK(ntfs_bridge_lookup(bridge, NTFS_BRIDGE_ROOT_INODE, "windows.TXT", &inode, &attrs) == NTFS_BRIDGE_OK,
+          "lookup folds case");
+    CHECK(ntfs_bridge_getattr(bridge, "/MIXED.txt", &attrs) == NTFS_BRIDGE_OK, "path lookup folds case");
+
+    /* Times round-trip: NTFS stores 100 ns units, so the stamp must be
+     * representable at that resolution. */
+    const int64_t stamp_ns = 1700000000123456700LL;
+    CHECK(ntfs_bridge_set_times_inode(bridge, inode, true, stamp_ns, true, stamp_ns) == NTFS_BRIDGE_OK,
+          "set access and modify time");
+    CHECK(ntfs_bridge_getattr(bridge, "/Windows.txt", &attrs) == NTFS_BRIDGE_OK, "getattr after set times");
+    CHECK(attrs.access_time_ns == stamp_ns, "access time applied (%lld)", (long long)attrs.access_time_ns);
+    CHECK(attrs.modify_time_ns == stamp_ns, "modify time applied (%lld)", (long long)attrs.modify_time_ns);
+
+    struct cookie_context cookies = { .count = 0 };
+    CHECK(ntfs_bridge_readdir(bridge, "/", 0, collect_cookie, &cookies) == NTFS_BRIDGE_OK, "readdir for cookies");
+    CHECK(cookies.count >= 2, "root has at least two entries");
+    struct list_context resumed = { .count = 0 };
+    CHECK(ntfs_bridge_readdir(bridge, "/", cookies.cookies[1], collect_entry, &resumed) == NTFS_BRIDGE_OK,
+          "readdir resumed from a cookie");
+    CHECK(resumed.count == cookies.count - 1, "resume returns exactly the remaining entries (%d vs %d)",
+          resumed.count, cookies.count - 1);
+    CHECK(resumed.count > 0 && strcmp(resumed.names[0], cookies.names[1]) == 0,
+          "resume starts at the entry the cookie points to");
+
+    CHECK(ntfs_bridge_close(bridge) == NTFS_BRIDGE_OK, "close windows-names test");
 }
 
 int main(int argc, char **argv)
@@ -380,6 +449,7 @@ int main(int argc, char **argv)
     test_dirty_volume(argv[2]);
     test_hibernated_volume(argv[3]);
     test_lookup_rename_statfs(argv[4]);
+    test_windows_names_case_and_cookies(argv[4]);
 
     printf("\n%d checks, %d failures\n", checks, failures);
     if (failures) {

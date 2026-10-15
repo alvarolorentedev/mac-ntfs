@@ -86,11 +86,10 @@ final class MountService {
         }
         let box = OperationBox { dissenter in
             if let dissenter {
-                let message = OperationBox.message(for: dissenter)
-                if message.lowercased().contains("not mounted") {
+                if DADissenterGetStatus(dissenter) == kDAReturnNotMounted {
                     completion(.success(()))
                 } else {
-                    completion(.failure(MountServiceError.operationFailed(message)))
+                    completion(.failure(MountServiceError.operationFailed(OperationBox.message(for: dissenter))))
                 }
             } else {
                 completion(.success(()))
@@ -159,7 +158,12 @@ final class MountService {
             safeName = bsdName
         }
         let base = home.appendingPathComponent("MacNTFS/Volumes", isDirectory: true)
-        let mountPoint = base.appendingPathComponent(safeName, isDirectory: true)
+        var mountPoint = base.appendingPathComponent(safeName, isDirectory: true)
+        if FileManager.default.fileExists(atPath: mountPoint.path) {
+            // Same label on another disk (or a leftover directory): keep the
+            // two mounts apart.
+            mountPoint = base.appendingPathComponent("\(safeName)-\(bsdName)", isDirectory: true)
+        }
         do {
             try FileManager.default.createDirectory(at: mountPoint, withIntermediateDirectories: true)
         } catch {

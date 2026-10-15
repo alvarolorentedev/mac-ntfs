@@ -18,8 +18,10 @@
 #include <ntfs-3g/attrib.h>
 #include <ntfs-3g/device.h>
 #include <ntfs-3g/dir.h>
+#include <ntfs-3g/index.h>
 #include <ntfs-3g/inode.h>
 #include <ntfs-3g/layout.h>
+#include <ntfs-3g/logging.h>
 #include <ntfs-3g/unistr.h>
 #include <ntfs-3g/volume.h>
 
@@ -468,6 +470,11 @@ static ntfs_bridge *open_common(const char *name,
         downgraded = !read_only;
     }
 
+    /* Windows NTFS resolves names case-insensitively and the extension
+     * advertises the same; listings keep the stored case (see readdir).
+     * Failure only means the locase table could not be built. */
+    ntfs_set_ignore_case(volume);
+
     ntfs_bridge *bridge = calloc(1, sizeof(*bridge));
     if (!bridge) {
         ntfs_umount(volume, FALSE);
@@ -540,6 +547,15 @@ bool ntfs_bridge_was_dirty(const ntfs_bridge *bridge)
 bool ntfs_bridge_was_hibernated(const ntfs_bridge *bridge)
 {
     return bridge ? bridge->hibernated : false;
+}
+
+const char *ntfs_bridge_volume_name(const ntfs_bridge *bridge)
+{
+    if (!bridge || !bridge->volume || !bridge->volume->vol_name ||
+        bridge->volume->vol_name[0] == 0) {
+        return NULL;
+    }
+    return bridge->volume->vol_name;
 }
 
 ntfs_bridge_status ntfs_bridge_sync(ntfs_bridge *bridge)
@@ -674,10 +690,12 @@ static int readdir_filldir(void *dirent,
                            const MFT_REF mref,
                            const unsigned dt_type)
 {
-    (void)pos;
     struct readdir_context *context = dirent;
 
-    if (name_type != FILE_NAME_POSIX) {
+    /* The library emits "." and ".." itself; the FSKit layer synthesizes
+     * them. DOS-only short names are the dual of a long name that is
+     * already listed (same rule as upstream ntfs-3g's FUSE filler). */
+    if (name_type == FILE_NAME_DOS) {
         return 0;
     }
     if (name_len == 1 && name[0] == '.') {
@@ -699,6 +717,7 @@ static int readdir_filldir(void *dirent,
     strncpy(entry.name, utf8, sizeof(entry.name) - 1);
     free(utf8);
     entry.file_id = MREF(mref);
+    entry.cookie = (uint64_t)pos;
 
     switch (dt_type) {
     case NTFS_DT_REG: entry.type = NTFS_BRIDGE_TYPE_FILE; break;
@@ -714,7 +733,7 @@ static int readdir_filldir(void *dirent,
     return 0;
 }
 
-static ntfs_bridge_status readdir_inode_core(ntfs_bridge *bridge, ntfs_inode *ni,
+static ntfs_bridge_status readdir_inode_core(ntfs_bridge *bridge, ntfs_inode *ni, uint64_t cookie,
                                              ntfs_bridge_dir_emit emit, void *context)
 {
     (void)bridge;
@@ -722,17 +741,26 @@ static ntfs_bridge_status readdir_inode_core(ntfs_bridge *bridge, ntfs_inode *ni
         return NTFS_BRIDGE_ERR_NOT_DIRECTORY;
     }
     struct readdir_context readdir = { .emit = emit, .user = context, .stopped = false };
-    s64 position = 0;
+    s64 position = (s64)cookie;
     errno = 0;
+    /* Lookups fold case, but listings must keep the stored case: ntfs_readdir
+     * lowercases names when the volume is not case-sensitive. All bridge calls
+     * are serialized, so the flag flip cannot race. */
+    ntfs_volume *volume = ni->vol;
+    bool was_case_sensitive = NVolCaseSensitive(volume);
+    NVolSetCaseSensitive(volume);
     int result = ntfs_readdir(ni, &position, &readdir, readdir_filldir);
     int error = errno;
+    if (!was_case_sensitive) {
+        NVolClearCaseSensitive(volume);
+    }
     if (result && !readdir.stopped) {
         return status_from_errno(error);
     }
     return NTFS_BRIDGE_OK;
 }
 
-ntfs_bridge_status ntfs_bridge_readdir_inode(ntfs_bridge *bridge, uint64_t inode,
+ntfs_bridge_status ntfs_bridge_readdir_inode(ntfs_bridge *bridge, uint64_t inode, uint64_t cookie,
                                              ntfs_bridge_dir_emit emit, void *context)
 {
     if (!bridge || !emit) {
@@ -743,12 +771,12 @@ ntfs_bridge_status ntfs_bridge_readdir_inode(ntfs_bridge *bridge, uint64_t inode
     if (!ni) {
         return status;
     }
-    status = readdir_inode_core(bridge, ni, emit, context);
+    status = readdir_inode_core(bridge, ni, cookie, emit, context);
     ntfs_inode_close(ni);
     return status;
 }
 
-ntfs_bridge_status ntfs_bridge_readdir(ntfs_bridge *bridge, const char *path,
+ntfs_bridge_status ntfs_bridge_readdir(ntfs_bridge *bridge, const char *path, uint64_t cookie,
                                        ntfs_bridge_dir_emit emit, void *context)
 {
     if (!bridge || !emit) {
@@ -759,7 +787,7 @@ ntfs_bridge_status ntfs_bridge_readdir(ntfs_bridge *bridge, const char *path,
     if (!ni) {
         return status;
     }
-    status = readdir_inode_core(bridge, ni, emit, context);
+    status = readdir_inode_core(bridge, ni, cookie, emit, context);
     ntfs_inode_close(ni);
     return status;
 }
@@ -865,6 +893,28 @@ ntfs_bridge_status ntfs_bridge_unlink(ntfs_bridge *bridge, const char *path)
     status = result ? status_from_errno(errno) : NTFS_BRIDGE_OK;
     free(unicode);
     return status;
+}
+
+static bool inode_has_name(ntfs_inode *ni, uint64_t parent_mft,
+                           const ntfschar *name, int name_len)
+{
+    ntfs_attr_search_ctx *ctx = ntfs_attr_get_search_ctx(ni, NULL);
+    if (!ctx) {
+        return false;
+    }
+    bool found = false;
+    while (!ntfs_attr_lookup(AT_FILE_NAME, AT_UNNAMED, 0, CASE_SENSITIVE, 0, NULL, 0, ctx)) {
+        FILE_NAME_ATTR *fn = (FILE_NAME_ATTR *)((u8 *)ctx->attr +
+                                                le16_to_cpu(ctx->attr->value_offset));
+        if (MREF_LE(fn->parent_directory) == parent_mft &&
+            fn->file_name_length == name_len &&
+            memcmp(fn->file_name, name, (size_t)name_len * sizeof(ntfschar)) == 0) {
+            found = true;
+            break;
+        }
+    }
+    ntfs_attr_put_search_ctx(ctx);
+    return found;
 }
 
 ntfs_bridge_status ntfs_bridge_rename(ntfs_bridge *bridge, const char *from, const char *to)
@@ -993,34 +1043,62 @@ ntfs_bridge_status ntfs_bridge_rename(ntfs_bridge *bridge, const char *from, con
             ntfs_inode_close(src_dir_ni);
             goto rollback;
         }
+        uint64_t src_mft = src_ni->mft_no;
+        uint64_t src_parent_mft = src_dir_ni->mft_no;
+        uint64_t dest_parent_mft = dest_dir_ni->mft_no;
         errno = 0;
         /* Closes src_ni and src_dir_ni. */
         int delete_result = ntfs_delete(bridge->volume, from, src_ni, src_dir_ni,
                                         src_unicode, (u8)src_length);
-        free(src_unicode);
         if (delete_result) {
+            /* The library can report a failure after the rename has already
+             * committed: closing the source resolves its FILE_NAME through
+             * the destination index, which may not be on disk yet. The
+             * source MFT record is the truth, so verify before failing. */
             status = status_from_errno(errno);
+            ntfs_inode *verify = ntfs_inode_open(bridge->volume, (MFT_REF)src_mft);
+            if (verify) {
+                bool committed =
+                    inode_has_name(verify, dest_parent_mft, dest_unicode, dest_length) &&
+                    !inode_has_name(verify, src_parent_mft, src_unicode, src_length);
+                ntfs_inode_close(verify);
+                if (committed) {
+                    status = NTFS_BRIDGE_OK;
+                }
+            }
+            free(src_unicode);
+            if (status == NTFS_BRIDGE_OK) {
+                goto cleanup;
+            }
             goto rollback;
         }
+        free(src_unicode);
         status = NTFS_BRIDGE_OK;
         goto cleanup;
     }
 
 rollback: {
-        /* Remove the new link to restore the original name. */
+        /* Remove the new link to restore the original name. The rollback must
+         * not overwrite the failure that brought us here: the rename did not
+         * happen and the caller has to know. */
+        ntfs_bridge_status failure = status;
+        ntfs_bridge_status rollback_status = NTFS_BRIDGE_OK;
         errno = 0;
         ntfs_inode *rollback_ni = ntfs_pathname_to_inode(bridge->volume, NULL, to);
-        ntfs_inode *rollback_dir = open_inode_by_path(bridge, dest_parent, &status);
+        ntfs_inode *rollback_dir = open_inode_by_path(bridge, dest_parent, &rollback_status);
         ntfschar *rollback_unicode = NULL;
         int rollback_length = ntfs_mbstoucs(dest_name, &rollback_unicode);
         if (rollback_ni && rollback_dir && rollback_length >= 0) {
-            ntfs_delete(bridge->volume, to, rollback_ni, rollback_dir,
-                        rollback_unicode, (u8)rollback_length);
+            if (ntfs_delete(bridge->volume, to, rollback_ni, rollback_dir,
+                            rollback_unicode, (u8)rollback_length)) {
+                ntfs_log_error("rename rollback failed; the destination link may remain\n");
+            }
         } else {
             if (rollback_ni) ntfs_inode_close(rollback_ni);
             if (rollback_dir) ntfs_inode_close(rollback_dir);
         }
         free(rollback_unicode);
+        status = failure;
     }
 
 cleanup:
@@ -1201,6 +1279,51 @@ ntfs_bridge_status ntfs_bridge_truncate_inode(ntfs_bridge *bridge, uint64_t inod
     return status;
 }
 
+static struct timespec ns_to_timespec(int64_t ns)
+{
+    struct timespec value;
+    value.tv_sec = (time_t)(ns / 1000000000LL);
+    value.tv_nsec = (long)(ns % 1000000000LL);
+    if (value.tv_nsec < 0) {
+        value.tv_sec -= 1;
+        value.tv_nsec += 1000000000L;
+    }
+    return value;
+}
+
+ntfs_bridge_status ntfs_bridge_set_times_inode(ntfs_bridge *bridge, uint64_t inode,
+                                               bool set_access, int64_t access_time_ns,
+                                               bool set_modify, int64_t modify_time_ns)
+{
+    if (!bridge) {
+        return NTFS_BRIDGE_ERR_INVAL;
+    }
+    if (bridge->read_only) {
+        return NTFS_BRIDGE_ERR_PERM;
+    }
+    if (!set_access && !set_modify) {
+        return NTFS_BRIDGE_OK;
+    }
+    ntfs_bridge_status status;
+    ntfs_inode *ni = open_inode_by_id(bridge, inode, &status);
+    if (!ni) {
+        return status;
+    }
+    if (set_access) {
+        ni->last_access_time = timespec2ntfs(ns_to_timespec(access_time_ns));
+    }
+    if (set_modify) {
+        ni->last_data_change_time = timespec2ntfs(ns_to_timespec(modify_time_ns));
+    }
+    /* utimes(2) also advances the inode change time. */
+    ntfs_inode_update_times(ni, NTFS_UPDATE_CTIME);
+    NInoSetDirty(ni);
+    if (ntfs_inode_close(ni)) {
+        return NTFS_BRIDGE_ERR_IO;
+    }
+    return NTFS_BRIDGE_OK;
+}
+
 ntfs_bridge_status ntfs_bridge_read(ntfs_bridge *bridge, const char *path, uint64_t offset,
                                     void *buffer, size_t length, size_t *out_read)
 {
@@ -1270,4 +1393,75 @@ ntfs_bridge_status ntfs_bridge_test_mark_dirty(ntfs_bridge *bridge)
         return status_from_errno(errno);
     }
     return NTFS_BRIDGE_OK;
+}
+
+ntfs_bridge_status ntfs_bridge_test_set_win32_namespace(ntfs_bridge *bridge, const char *path)
+{
+    if (!bridge || bridge->read_only) {
+        return NTFS_BRIDGE_ERR_INVAL;
+    }
+    ntfs_bridge_status status;
+    ntfs_inode *ni = open_inode_by_path(bridge, path, &status);
+    if (!ni) {
+        return status;
+    }
+    char parent[4096];
+    const char *name;
+    status = split_parent(path, parent, sizeof(parent), &name);
+    if (status != NTFS_BRIDGE_OK) {
+        ntfs_inode_close(ni);
+        return status;
+    }
+    ntfs_inode *dir_ni = open_inode_by_path(bridge, parent, &status);
+    if (!dir_ni) {
+        ntfs_inode_close(ni);
+        return status;
+    }
+
+    int error = 0;
+    bool found = false;
+    ntfs_attr_search_ctx *ctx = ntfs_attr_get_search_ctx(ni, NULL);
+    if (!ctx) {
+        error = errno ? errno : EIO;
+    }
+    while (ctx && !found && !ntfs_attr_lookup(AT_FILE_NAME, AT_UNNAMED, 0,
+                                              CASE_SENSITIVE, 0, NULL, 0, ctx)) {
+        FILE_NAME_ATTR *fn = (FILE_NAME_ATTR *)((u8 *)ctx->attr +
+                                                le16_to_cpu(ctx->attr->value_offset));
+        if (fn->file_name_type != FILE_NAME_POSIX ||
+            MREF_LE(fn->parent_directory) != dir_ni->mft_no) {
+            continue;
+        }
+        u32 length = le32_to_cpu(ctx->attr->value_length);
+        FILE_NAME_ATTR *copy = malloc(length);
+        if (!copy) {
+            error = ENOMEM;
+            break;
+        }
+        memcpy(copy, fn, length);
+        if (ntfs_index_remove(dir_ni, ni, fn, (int)length)) {
+            error = errno;
+            free(copy);
+            break;
+        }
+        fn->file_name_type = FILE_NAME_WIN32;
+        copy->file_name_type = FILE_NAME_WIN32;
+        if (ntfs_index_add_filename(dir_ni, copy, MK_MREF(ni->mft_no,
+                                                          le16_to_cpu(ni->mrec->sequence_number)))) {
+            error = errno;
+        } else {
+            NInoSetDirty(ni);
+            found = true;
+        }
+        free(copy);
+    }
+    if (ctx) {
+        ntfs_attr_put_search_ctx(ctx);
+    }
+    ntfs_inode_close(ni);
+    ntfs_inode_close(dir_ni);
+    if (error) {
+        return status_from_errno(error);
+    }
+    return found ? NTFS_BRIDGE_OK : NTFS_BRIDGE_ERR_NOT_FOUND;
 }

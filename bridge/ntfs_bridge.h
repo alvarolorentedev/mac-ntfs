@@ -79,6 +79,9 @@ typedef struct {
     char name[1024]; /* UTF-8, NUL-terminated */
     ntfs_bridge_entry_type type;
     uint64_t file_id;
+    /* Opaque resume token: the ntfs_readdir position of this entry. Pass it
+     * back as the cookie to continue enumeration after it. */
+    uint64_t cookie;
 } ntfs_bridge_dirent;
 
 /* Return false to stop the enumeration early. */
@@ -119,12 +122,16 @@ ntfs_bridge_status ntfs_bridge_close(ntfs_bridge *bridge);
 bool ntfs_bridge_is_read_only(const ntfs_bridge *bridge);
 bool ntfs_bridge_was_dirty(const ntfs_bridge *bridge);
 bool ntfs_bridge_was_hibernated(const ntfs_bridge *bridge);
+/* The volume label from the boot sector ($Volume), or NULL when empty. */
+const char *ntfs_bridge_volume_name(const ntfs_bridge *bridge);
 ntfs_bridge_status ntfs_bridge_sync(ntfs_bridge *bridge);
 ntfs_bridge_status ntfs_bridge_statfs(ntfs_bridge *bridge, ntfs_bridge_volume_stats *out);
 
 /* Path-based operations (resolve the path on every call). */
 ntfs_bridge_status ntfs_bridge_getattr(ntfs_bridge *bridge, const char *path, ntfs_bridge_attrs *out);
-ntfs_bridge_status ntfs_bridge_readdir(ntfs_bridge *bridge, const char *path,
+/* cookie 0 starts at the beginning; use the cookie of a preceding entry to
+ * resume after it. */
+ntfs_bridge_status ntfs_bridge_readdir(ntfs_bridge *bridge, const char *path, uint64_t cookie,
                                        ntfs_bridge_dir_emit emit, void *context);
 ntfs_bridge_status ntfs_bridge_create(ntfs_bridge *bridge, const char *path, bool directory);
 ntfs_bridge_status ntfs_bridge_unlink(ntfs_bridge *bridge, const char *path);
@@ -139,16 +146,24 @@ ntfs_bridge_status ntfs_bridge_rename(ntfs_bridge *bridge, const char *from, con
 ntfs_bridge_status ntfs_bridge_lookup(ntfs_bridge *bridge, uint64_t directory_inode, const char *name,
                                       uint64_t *out_inode, ntfs_bridge_attrs *out_attrs);
 ntfs_bridge_status ntfs_bridge_getattr_inode(ntfs_bridge *bridge, uint64_t inode, ntfs_bridge_attrs *out);
-ntfs_bridge_status ntfs_bridge_readdir_inode(ntfs_bridge *bridge, uint64_t inode,
+ntfs_bridge_status ntfs_bridge_readdir_inode(ntfs_bridge *bridge, uint64_t inode, uint64_t cookie,
                                              ntfs_bridge_dir_emit emit, void *context);
 ntfs_bridge_status ntfs_bridge_read_inode(ntfs_bridge *bridge, uint64_t inode, uint64_t offset,
                                           void *buffer, size_t length, size_t *out_read);
 ntfs_bridge_status ntfs_bridge_write_inode(ntfs_bridge *bridge, uint64_t inode, uint64_t offset,
                                            const void *buffer, size_t length, size_t *out_written);
 ntfs_bridge_status ntfs_bridge_truncate_inode(ntfs_bridge *bridge, uint64_t inode, uint64_t size);
+/* Sets access and/or modify time (nanoseconds since the Unix epoch). */
+ntfs_bridge_status ntfs_bridge_set_times_inode(ntfs_bridge *bridge, uint64_t inode,
+                                               bool set_access, int64_t access_time_ns,
+                                               bool set_modify, int64_t modify_time_ns);
 
 /* Test fixtures only: marks the on-disk volume dirty and flushes. */
 ntfs_bridge_status ntfs_bridge_test_mark_dirty(ntfs_bridge *bridge);
+
+/* Test fixture only: rewrites a POSIX FILE_NAME attribute as WIN32, the way
+ * Windows stores names, so enumeration tests cover Windows-created volumes. */
+ntfs_bridge_status ntfs_bridge_test_set_win32_namespace(ntfs_bridge *bridge, const char *path);
 
 const char *ntfs_bridge_strerror(ntfs_bridge_status status);
 
