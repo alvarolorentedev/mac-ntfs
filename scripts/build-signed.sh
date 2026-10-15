@@ -74,8 +74,10 @@ if [ "$CONFIG" = "Release" ]; then
     esac
 fi
 
+SIGN_IDENTITY="${SIGN_IDENTITY:-Developer ID Application}"
 xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration "$CONFIG" \
-    -derivedDataPath "$DERIVED_DATA" build
+    -derivedDataPath "$DERIVED_DATA" \
+    CODE_SIGN_IDENTITY="$SIGN_IDENTITY" build
 
 APP="$DERIVED_DATA/Build/Products/$CONFIG/MacNTFS.app"
 APPEX="$APP/Contents/Extensions/NTFSModule.appex"

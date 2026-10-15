@@ -112,7 +112,8 @@ rm -f "$DMG"
 hdiutil create -quiet -volname "MacNTFS" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
 
 echo "==> signing the DMG"
-codesign --force --sign "Developer ID Application" --timestamp "$DMG"
+SIGN_IDENTITY="${SIGN_IDENTITY:-Developer ID Application}"
+codesign --force --sign "$SIGN_IDENTITY" --timestamp "$DMG"
 
 if [ "$notarize" = 1 ]; then
     notarytool_submit "$DMG"

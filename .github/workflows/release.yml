@@ -53,6 +53,13 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ci "$KEYCHAIN" >/dev/null
           security list-keychains -d user -s "$KEYCHAIN" $(cat "$RUNNER_TEMP/keychains.txt")
           rm -f "$RUNNER_TEMP/cert.p12"
+          IDENTITY_HASH="$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | awk '/Developer ID Application/ {print $2; exit}')"
+          if [ -z "$IDENTITY_HASH" ]; then
+            echo "error: imported keychain contains no Developer ID Application identity" >&2
+            exit 1
+          fi
+          echo "SIGN_IDENTITY=$IDENTITY_HASH" >> "$GITHUB_ENV"
 
       - name: Verify Developer ID identity
         run: |
