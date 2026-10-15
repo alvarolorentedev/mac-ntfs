@@ -13,6 +13,7 @@ Run in order; each step must pass before the next.
 ./scripts/run-engine-tests.sh       # [ ] "ENGINE TESTS: PASSED" (154 checks)
 ./scripts/create-dev-id-profiles.sh # [ ] both .provisionprofile written
 ./scripts/build-signed.sh           # [ ] BUILD SUCCEEDED, "entitlements OK"
+./scripts/make-installer.sh         # [ ] DMG notarized ("Accepted"), stapled, spctl accepted
 ./scripts/m1-mount-test.sh          # [ ] "M1 GATE: PASSED"
 ./scripts/m3-mount-test.sh          # [ ] "M3 GATE: PASSED"
 ./scripts/m4-mount-test.sh          # [ ] "M4 GATE: PASSED"

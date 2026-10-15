@@ -62,6 +62,18 @@ for directory in \
     cp -f "$PROFILE_DIR"/*.provisionprofile "$directory/"
 done
 
+# A notarized/stapled Release app carries com.apple.provenance xattrs and can
+# no longer be modified in place (Xcode fails writing the embedded profile
+# with EPERM). Remove the product so the build writes it fresh.
+if [ "$CONFIG" = "Release" ]; then
+    APP_PRODUCT="$DERIVED_DATA/Build/Products/Release/MacNTFS.app"
+    case "$APP_PRODUCT" in
+        */Build/Products/Release/MacNTFS.app)
+            rm -rf "$APP_PRODUCT"
+            ;;
+    esac
+fi
+
 xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration "$CONFIG" \
     -derivedDataPath "$DERIVED_DATA" build
 
@@ -74,8 +86,14 @@ echo "    $APP"
 
 echo "==> signature check"
 codesign --verify --strict "$APP"
-codesign -d --entitlements - "$APPEX" 2>/dev/null | grep -q "com.apple.developer.fskit.fsmodule" \
-    || { echo "error: appex is missing com.apple.developer.fskit.fsmodule" >&2; exit 1; }
-codesign -d --entitlements - "$APP" 2>/dev/null | grep -q "com.apple.developer.fskit.mount" \
-    || { echo "error: app is missing com.apple.developer.fskit.mount" >&2; exit 1; }
+APPEX_ENTITLEMENTS="$(codesign -d --entitlements - "$APPEX" 2>/dev/null || true)"
+APP_ENTITLEMENTS="$(codesign -d --entitlements - "$APP" 2>/dev/null || true)"
+if ! grep -q "com.apple.developer.fskit.fsmodule" <<<"$APPEX_ENTITLEMENTS"; then
+    echo "error: appex is missing com.apple.developer.fskit.fsmodule" >&2
+    exit 1
+fi
+if ! grep -q "com.apple.developer.fskit.mount" <<<"$APP_ENTITLEMENTS"; then
+    echo "error: app is missing com.apple.developer.fskit.mount" >&2
+    exit 1
+fi
 echo "    entitlements OK"
