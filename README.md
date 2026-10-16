@@ -9,7 +9,7 @@ engine, so it mounts NTFS drives with full read/write access from user space:
 nothing to approve in Recovery Mode, nothing to downgrade, nothing left behind
 after you remove it.
 
-Status: **0.1.0** — read/write verified on **macOS 27.0.1** and **macOS 26.6.2**
+Status: **0.2.0** — read/write verified on **macOS 27.0.1** and **macOS 26.6.2**
 (Apple Silicon).
 
 ## Why MacNTFS
@@ -96,7 +96,7 @@ General → Login Items & Extensions → File System Extensions, then delete
 
 ## Maturity and limitations
 
-MacNTFS is young (0.1.0). The write path is verified with content hashes across
+MacNTFS is young (0.2.0). The write path is verified with content hashes across
 remounts on disposable images, but treat read/write on valuable disks like any
 new driver: keep backups and try it on non-critical data first. The safety
 gates above are the main protection against the classic NTFS corruption cases.
