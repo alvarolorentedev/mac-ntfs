@@ -52,7 +52,7 @@ docs/                    this guide, validation checklist and diagnostics guide
 
 Prerequisites:
 
-- macOS 27 with Xcode 27.
+- macOS 26.6.2 or later with Xcode 27.
 - Build-time only for the engine: Xcode command line tools (`curl`, `tar`,
   `make` are present on macOS). No Homebrew at build or runtime.
 - Signing credentials for the Apple Developer team that owns the FSKit
@@ -97,14 +97,17 @@ unsigned compilation check on hosted CI runners, use `COMPILE_ONLY=1`.
 Pushing a version tag builds a Release app, notarizes and staples it, packages
 `MacNTFS-<version>.dmg` (app + Applications shortcut + quick start) and attaches
 it to the GitHub release. The workflow lives in
-`.github/workflows/release.yml` and runs on a **self-hosted macOS runner**
-(labeled `self-hosted, macOS, ARM64`) that has Xcode 27 / macOS 27. This
-machine runs two runner instances: `macbook-air-ci` (opencode-cloud-link) and
-`macbook-air-ci-ntfs` (this repository, `/Users/alvarolorente/ci/runner-mac-ntfs`,
-installed as a LoginItem via `svc.sh`). The keychain is left untouched when the
-certificate already lives on the machine. The app version (`MARKETING_VERSION`)
-must match the tag. Mount integration tests still run locally via
-`scripts/validate-all.sh` because FSKit enablement is per-user machine state.
+`.github/workflows/release.yml` and runs in a disposable Tart macOS 26.6.2 VM
+with Xcode 27. The runner requires `self-hosted`, `macOS`, `ARM64`, `tart-macos`
+and `tart-run-${{ github.run_id }}-${{ github.run_attempt }}` labels. A shared
+host controller polls this repository and CloudLink every two minutes and runs
+one VM at a time. Each VM handles one job and is destroyed afterward.
+
+Every run imports the required certificate secrets into a temporary keychain.
+The app version (`MARKETING_VERSION`) must match a release tag. Manual dispatch
+uploads a seven-day `macntfs-tart-installer` artifact without publishing a release.
+Mount integration tests run separately through `scripts/validate-all.sh` because
+FSKit enablement is per-user machine state.
 
 Required repository secrets:
 
@@ -119,8 +122,7 @@ Required repository secrets:
 Export the certificate once: Keychain Access → My Certificates → "Developer ID
 Application: …" → Export…, save as .p12 with a password, then
 `base64 -i cert.p12 | pbcopy` and paste into the `DEVELOPER_ID_P12` secret.
-If the runner machine already has the certificate in its login keychain, the
-`DEVELOPER_ID_P12` / `DEVELOPER_ID_P12_PASSWORD` secrets can be left unset.
+Both certificate secrets are mandatory in CI; fresh VMs have no signing identity.
 
 The same installer can be produced locally:
 
@@ -129,8 +131,8 @@ CONFIG=Release ./scripts/build-signed.sh
 ./scripts/make-installer.sh          # notarizes and staples when ASC_* are set
 ```
 
-CI builds and notarizes on hosted runners; mount integration tests still require
-a self-hosted Mac because FSKit module enablement is per-user machine state.
+CI builds and notarizes in disposable VMs. Mount integration tests require explicit
+FSKit module enablement in their validation environment.
 
 ## Validation
 
