@@ -110,7 +110,7 @@ final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
 
         let label = ntfs_bridge_volume_name(bridge).map { String(cString: $0) } ?? ""
         // FSKit replaced the volume protocols in macOS 27 (async
-        // FSVolume.Handler); 15.4–26 only has FSVolume.Operations. The volume
+        // FSVolume.Handler); macOS 26 only has FSVolume.Operations. The volume
         // classes share one core, so the only version-dependent code is here.
         let readOnlyVolume = ntfs_bridge_is_read_only(bridge)
         let volumeName = label.isEmpty ? "NTFS Volume" : label

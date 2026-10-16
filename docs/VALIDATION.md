@@ -43,37 +43,45 @@ Between rebuilds, kill stale extension processes:
 
 ## VM matrix (FSKit API generations)
 
-The extension carries two adapters: `FSVolume.Operations` (macOS 15.4–26,
-deprecated in 27) and `FSVolume.Handler` (macOS 27+), chosen in `loadResource`.
-The host/CI machine runs macOS 27, so the V1 adapter is exercised in VMs:
+The supported floor is **macOS 26**: FSKit's original volume protocols
+(`FSVolume.Operations`) are the only ones it has, while macOS 27 replaced them
+with the async `FSVolume.Handler`. The extension carries both adapters, chosen
+in `loadResource`; the host/CI machine runs macOS 27, so the V1 adapter is
+exercised in VMs. One command per OS line:
 
 ```sh
-tart clone ghcr.io/cirruslabs/macos-tahoe-base:latest mac26
-tart run mac26 --no-graphics --dir=mac-ntfs:$PWD &
-tart exec mac26 sudo ditto "…/MacNTFS.app" /Applications/MacNTFS.app
-tart exec mac26 open /Applications/MacNTFS.app        # registers the appex
-tart exec mac26 /Applications/MacNTFS.app/Contents/MacOS/MacNTFS --enable-extension
-cd "/Volumes/My Shared Files/mac-ntfs" && MOUNTPOINT="$HOME/mnt" ./scripts/m3-mount-test.sh
+./scripts/check-min-os.sh                                             # compile-floor guard (Mach-O minos <= 26.0)
+./scripts/vm-validate.sh ghcr.io/cirruslabs/macos-tahoe-base:latest   # macOS 26.x
 ```
+
+`vm-validate.sh` clones the image (or reuses a running VM), installs the signed
+app from `build/DerivedData` into `/Applications`, enables the extension, runs
+the engine, M3 and M4 gates inside the guest, reports which adapter loaded, and
+deletes harness-created VMs afterwards unless `--keep` is passed. The registry
+only publishes `latest` per OS family, so this validates the newest point
+release of a line; for an exact build, create a VM with
+`tart create --from-ipsw <file.ipsw>`, install the Tart guest agent, then pass
+its name to `vm-validate.sh`.
 
 Notes learned the hard way:
 
 - The m3 mountpoint must be on the guest's own APFS; mounting onto the virtiofs
   share breaks `umount` (EINVAL) on macOS 26 and leaves stale mounts.
-- m3 needs passwordless sudo inside the VM (`snapshot` images have it; base
-  images need `echo admin | sudo -S …` once).
-- Enablement on 15.x additionally uses `pluginkit -e use -i <module id>`; the
-  FSKit plist alone is not enough there.
+- m3 needs passwordless sudo inside the VM; `vm-validate.sh` configures it.
+- The FSKit enabled-list plist is authoritative on 26; the harness still runs
+  `pluginkit -e use` as a fallback.
 
 Results (2026-10-16):
 
-| Guest | Adapter | M3 | M4 | Notes |
-|---|---|---|---|---|
-| macOS 26.6.2 | V1 (`FSVolume.Operations`) | PASSED | PASSED | full RW cycle + safety downgrades |
-| macOS 27 (host) | V3 (`FSVolume.Handler`) | PASSED | PASSED | |
-| macOS 15.7.7 | V1 | blocked | blocked | see below |
+| Guest | Adapter | Engine | M3 | M4 | Notes |
+|---|---|---|---|---|---|
+| macOS 26.6.2 | V1 (`FSVolume.Operations`) | PASSED | PASSED | PASSED | full RW cycle + safety downgrades |
+| macOS 27 (host) | V3 (`FSVolume.Handler`) | PASSED | PASSED | PASSED | |
 
-macOS 15.7.7 blockers (not code defects — reproduce with Apple's own module):
+### Why the floor is 26 and not 15.4
+
+FSKit exists from macOS 15.4 and the code once built for it, but 15.x is
+unsupported. On the only 15.x build available for testing (15.7.7):
 
 1. `mount -F` is broken system-wide: fskitd drops the `mountVolume:…` XPC
    message ("received a message or reply block that is not in the interface"),
@@ -82,8 +90,8 @@ macOS 15.7.7 blockers (not code defects — reproduce with Apple's own module):
    `com.apple.filesystems.util.ntfs`, without ever starting our extension.
 3. Our V1 adapter itself loads and opens the image read-write (verified in
    `log show`), so the bridge is fine; the 15.x system mount paths are the
-   blocker. Re-verify on a stock 15.4 machine (not a Cirrus-modified VM) before
-   claiming 15.x support.
+   blocker. Re-verify on stock 15.x hardware before ever lowering the floor
+   again.
 
 ## Manual (menu bar app)
 

@@ -51,10 +51,10 @@ private let directoryEmitCallback: ntfs_bridge_dir_emit = { context, entry in
 /// callbacks.
 ///
 /// FSKit revised its volume protocols in macOS 27: `FSVolume.Operations` and
-/// `FSVolume.ReadWriteOperations` (introduced in 15.4) were replaced by the
-/// async `FSVolume.Handler` and `FSVolume.ReadWriteHandler`. This base holds
-/// everything version-independent; `NTFSVolumeV1` and `NTFSVolumeV3` are the
-/// thin adapters, and the file system picks one per OS version.
+/// `FSVolume.ReadWriteOperations` (the original 15.4 API) were replaced by the
+/// async `FSVolume.Handler` and `FSVolume.ReadWriteHandler`. The supported
+/// floor is macOS 26, which is V1-only, so both adapters are needed: this base
+/// holds everything version-independent and the file system picks one per OS.
 class NTFSVolumeBase: FSVolume {
     /// Maximum entries collected from the bridge per enumeration call; larger
     /// batches trade memory for fewer round trips with FSKit.
@@ -504,12 +504,12 @@ extension NTFSVolumeV3: FSVolume.ReadWriteHandler {
     }
 }
 
-// MARK: - macOS 15.4–26 adapter
+// MARK: - macOS 26 adapter
 
 final class NTFSVolumeV1: NTFSVolumeBase {}
 
 // The V1 volume protocols are deprecated in macOS 27 in favor of FSVolume.Handler;
-// they remain the only API on 15.4–26, which is why this adapter exists.
+// they are the only volume API on macOS 26, which is why this adapter exists.
 @available(macOS, deprecated: 27.0)
 extension NTFSVolumeV1: FSVolume.Operations {
     func activate(options: FSTaskOptions, replyHandler: @escaping (FSItem?, (any Error)?) -> Void) {

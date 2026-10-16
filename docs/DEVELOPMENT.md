@@ -14,7 +14,7 @@ MacNTFS.app (SwiftUI menu bar; non-sandboxed)
            NTFSFileSystem    probe (NTFS boot sector) + load (safety gate)
            NTFSVolumeBase    shared volume core: bridge, cache, enumeration
            NTFSVolumeV3      macOS 27+ adapter (async FSVolume.Handler)
-           NTFSVolumeV1      macOS 15.4–26 adapter (deprecated FSVolume.Operations)
+           NTFSVolumeV1      macOS 26 adapter (deprecated FSVolume.Operations)
            NTFSDeviceShim    FSBlockDeviceResource → C callbacks (aligned RMW)
            bridge/ntfs_bridge.c
                              owns ntfs_volume*: mount/umount, lookup, readdir,
@@ -30,9 +30,11 @@ error. Device I/O uses the resource's direct path, bypassing the kernel buffer
 cache; unaligned requests are wrapped in sector-aligned read-modify-write.
 
 The volume adapters are thin: `loadResource` picks `NTFSVolumeV3` on macOS 27+
-(`FSVolume.Handler`) and `NTFSVolumeV1` on 15.4–26 (`FSVolume.Operations`,
-deprecated in 27 but required below it). The deployment target is 15.4 so the
-compiler rejects any accidental use of newer APIs anywhere in the app.
+(`FSVolume.Handler`) and `NTFSVolumeV1` on 26 (`FSVolume.Operations`, deprecated
+in 27 but the only volume API on 26). The deployment target is 26.0 so the
+compiler rejects any accidental use of newer APIs anywhere in the app. macOS
+15.x is unsupported: the system mount paths there fail even for Apple's own
+FSKit module (see `docs/VALIDATION.md`).
 
 ## Layout
 
@@ -136,10 +138,17 @@ All validation runs against disposable NTFS images; nothing in this repository
 touches physical drives.
 
 ```sh
+./scripts/check-min-os.sh       # Mach-O floor guard: everything stamped <= 26.0
 ./scripts/run-engine-tests.sh   # bridge suite, no FSKit needed
 ./scripts/m3-mount-test.sh      # mounted read/write + safety downgrades
 ./scripts/m4-mount-test.sh      # app mount/unmount/eject code paths
 ./scripts/validate-all.sh       # everything above in order
+```
+
+Per-OS runtime validation runs in disposable VMs (see `docs/VALIDATION.md`):
+
+```sh
+./scripts/vm-validate.sh ghcr.io/cirruslabs/macos-tahoe-base:latest   # macOS 26.x
 ```
 
 See `docs/VALIDATION.md` for the full release checklist and `docs/DIAGNOSTICS.md`

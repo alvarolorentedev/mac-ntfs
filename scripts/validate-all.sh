@@ -26,6 +26,7 @@ run_step() {
     fi
 }
 
+run_step "min-OS floor check" "$REPO_ROOT/scripts/check-min-os.sh"
 run_step "engine tests" "$REPO_ROOT/scripts/run-engine-tests.sh"
 run_step "M3 mounted read/write gate" "$REPO_ROOT/scripts/m3-mount-test.sh"
 run_step "M4 app mount/unmount/eject gate" "$REPO_ROOT/scripts/m4-mount-test.sh"

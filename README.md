@@ -9,7 +9,8 @@ engine, so it mounts NTFS drives with full read/write access from user space:
 nothing to approve in Recovery Mode, nothing to downgrade, nothing left behind
 after you remove it.
 
-Status: **0.1.0** — read/write verified on **macOS 27.0.1** (Apple Silicon).
+Status: **0.1.0** — read/write verified on **macOS 27.0.1** and **macOS 26.6.2**
+(Apple Silicon).
 
 ## Why MacNTFS
 
@@ -54,8 +55,7 @@ free, open-source option that gets read/write without either.
 
 ## Requirements
 
-- macOS 27, Apple Silicon. FSKit itself needs macOS 15.4+, but this project is
-  only built and tested against macOS 27 — earlier versions are untested.
+- **macOS 26 or later**, Apple Silicon. Verified on macOS 26.6.2 and 27.0.1.
 - Nothing else. No macFUSE, no Homebrew, no admin tools.
 
 ## Install

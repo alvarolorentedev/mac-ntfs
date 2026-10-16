@@ -9,9 +9,9 @@
 #
 set -euo pipefail
 
-# The static library is linked into the FSKit module, which must load on
-# macOS 15.4+; without this, clang stamps objects with the SDK's version.
-export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-15.4}"
+# The static library is linked into the FSKit module, whose deployment floor is
+# macOS 26; without this, clang stamps objects with the SDK's version.
+export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-26.0}"
 
 NTFS3G_VERSION="2026.9.28"
 NTFS3G_URL="https://download.tuxera.com/opensource/ntfs-3g_ntfsprogs-${NTFS3G_VERSION}.tgz"
