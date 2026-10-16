@@ -41,6 +41,50 @@ Between rebuilds, kill stale extension processes:
   read-only mount with write refusal, read/write mount with write and readback,
   read-only remount persistence, eject, diagnostics export.
 
+## VM matrix (FSKit API generations)
+
+The extension carries two adapters: `FSVolume.Operations` (macOS 15.4–26,
+deprecated in 27) and `FSVolume.Handler` (macOS 27+), chosen in `loadResource`.
+The host/CI machine runs macOS 27, so the V1 adapter is exercised in VMs:
+
+```sh
+tart clone ghcr.io/cirruslabs/macos-tahoe-base:latest mac26
+tart run mac26 --no-graphics --dir=mac-ntfs:$PWD &
+tart exec mac26 sudo ditto "…/MacNTFS.app" /Applications/MacNTFS.app
+tart exec mac26 open /Applications/MacNTFS.app        # registers the appex
+tart exec mac26 /Applications/MacNTFS.app/Contents/MacOS/MacNTFS --enable-extension
+cd "/Volumes/My Shared Files/mac-ntfs" && MOUNTPOINT="$HOME/mnt" ./scripts/m3-mount-test.sh
+```
+
+Notes learned the hard way:
+
+- The m3 mountpoint must be on the guest's own APFS; mounting onto the virtiofs
+  share breaks `umount` (EINVAL) on macOS 26 and leaves stale mounts.
+- m3 needs passwordless sudo inside the VM (`snapshot` images have it; base
+  images need `echo admin | sudo -S …` once).
+- Enablement on 15.x additionally uses `pluginkit -e use -i <module id>`; the
+  FSKit plist alone is not enough there.
+
+Results (2026-10-16):
+
+| Guest | Adapter | M3 | M4 | Notes |
+|---|---|---|---|---|
+| macOS 26.6.2 | V1 (`FSVolume.Operations`) | PASSED | PASSED | full RW cycle + safety downgrades |
+| macOS 27 (host) | V3 (`FSVolume.Handler`) | PASSED | PASSED | |
+| macOS 15.7.7 | V1 | blocked | blocked | see below |
+
+macOS 15.7.7 blockers (not code defects — reproduce with Apple's own module):
+
+1. `mount -F` is broken system-wide: fskitd drops the `mountVolume:…` XPC
+   message ("received a message or reply block that is not in the interface"),
+   for Apple's `com.apple.fskit.msdos` too, so exit 69 is not module-specific.
+2. DiskArbitration mounts NTFS read-only through Apple's built-in
+   `com.apple.filesystems.util.ntfs`, without ever starting our extension.
+3. Our V1 adapter itself loads and opens the image read-write (verified in
+   `log show`), so the bridge is fine; the 15.x system mount paths are the
+   blocker. Re-verify on a stock 15.4 machine (not a Cirrus-modified VM) before
+   claiming 15.x support.
+
 ## Manual (menu bar app)
 
 - [ ] Launch the app; the extension shows **Enabled** (enable it if not).

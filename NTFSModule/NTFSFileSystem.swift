@@ -15,7 +15,7 @@ final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
     /// reuses the same container for the mount; keep the volume so the bridge
     /// is opened exactly once per resource. Keyed on the resource: a second
     /// disk must never be handed the first disk's volume.
-    private var volumesByResource: [ObjectIdentifier: NTFSVolume] = [:]
+    private var volumesByResource: [ObjectIdentifier: NTFSVolumeBase] = [:]
 
     func probeResource(resource: FSResource, replyHandler: @escaping (FSProbeResult?, (any Error)?) -> Void) {
         guard let blockResource = resource as? FSBlockDeviceResource else {
@@ -109,10 +109,19 @@ final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
         }
 
         let label = ntfs_bridge_volume_name(bridge).map { String(cString: $0) } ?? ""
-        let volume = NTFSVolume(bridge: bridge,
-                                shim: shim,
-                                readOnly: ntfs_bridge_is_read_only(bridge),
-                                volumeName: label.isEmpty ? "NTFS Volume" : label)
+        // FSKit replaced the volume protocols in macOS 27 (async
+        // FSVolume.Handler); 15.4–26 only has FSVolume.Operations. The volume
+        // classes share one core, so the only version-dependent code is here.
+        let readOnlyVolume = ntfs_bridge_is_read_only(bridge)
+        let volumeName = label.isEmpty ? "NTFS Volume" : label
+        let volume: NTFSVolumeBase
+        if #available(macOS 27.0, *) {
+            volume = NTFSVolumeV3(bridge: bridge, shim: shim, readOnly: readOnlyVolume, volumeName: volumeName)
+            logger.notice("load: using the macOS 27+ FSVolume.Handler adapter")
+        } else {
+            volume = NTFSVolumeV1(bridge: bridge, shim: shim, readOnly: readOnlyVolume, volumeName: volumeName)
+            logger.notice("load: using the legacy FSVolume.Operations adapter")
+        }
         volumesByResource[ObjectIdentifier(resource)] = volume
         containerStatus = .ready
         replyHandler(volume, nil)

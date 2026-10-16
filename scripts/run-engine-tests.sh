@@ -21,6 +21,7 @@ mkdir -p "$OUT"
 
 echo "==> compiling engine tests"
 cc -std=gnu11 -O1 -g -Wall -Wextra \
+    -mmacosx-version-min=15.4 \
     -DHAVE_CONFIG_H \
     -I"$SRC" \
     -I"$SRC/include" \
