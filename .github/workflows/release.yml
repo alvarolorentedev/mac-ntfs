@@ -59,9 +59,9 @@ jobs:
           security import "$RUNNER_TEMP/cert.p12" -k "$KEYCHAIN" -P "$P12_PASSWORD" \
             -T /usr/bin/codesign -T /usr/bin/security
           security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k ci "$KEYCHAIN" >/dev/null
-          keychains=()
-          while IFS= read -r keychain; do keychains+=("$keychain"); done < "$RUNNER_TEMP/keychains.txt"
-          security list-keychains -d user -s "$KEYCHAIN" "${keychains[@]}"
+          set -- "$KEYCHAIN"
+          while IFS= read -r keychain; do set -- "$@" "$keychain"; done < "$RUNNER_TEMP/keychains.txt"
+          security list-keychains -d user -s "$@"
           rm -f "$RUNNER_TEMP/cert.p12"
           IDENTITY_HASH="$(security find-identity -v -p codesigning "$KEYCHAIN" \
             | awk '/Developer ID Application/ {print $2; exit}')"
@@ -134,9 +134,9 @@ jobs:
         run: |
           set -uo pipefail
           if [ -f "$RUNNER_TEMP/keychains.txt" ]; then
-            keychains=()
-            while IFS= read -r keychain; do keychains+=("$keychain"); done < "$RUNNER_TEMP/keychains.txt"
-            security list-keychains -d user -s "${keychains[@]}" 2>/dev/null || true
+            set --
+            while IFS= read -r keychain; do set -- "$@" "$keychain"; done < "$RUNNER_TEMP/keychains.txt"
+            security list-keychains -d user -s "$@" 2>/dev/null || true
             rm -f "$RUNNER_TEMP/keychains.txt"
           fi
           security delete-keychain "$RUNNER_TEMP/build.keychain-db" 2>/dev/null || true
