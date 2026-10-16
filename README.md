@@ -103,14 +103,16 @@ unsigned compilation check on hosted CI runners, use `COMPILE_ONLY=1`.
 Pushing a version tag builds a Release app, notarizes and staples it, packages
 `MacNTFS-<version>.dmg` (app + Applications shortcut + quick start) and attaches
 it to the GitHub release. The workflow lives in
-`.github/workflows/release.yml` and runs on a **self-hosted macOS runner**
-(labeled `self-hosted, macOS, ARM64`) that has Xcode 27 / macOS 27. This
-machine runs two runner instances: `macbook-air-ci` (opencode-cloud-link) and
-`macbook-air-ci-ntfs` (this repository, `/Users/alvarolorente/ci/runner-mac-ntfs`,
-installed as a LoginItem via `svc.sh`). The keychain is left untouched when the
-certificate already lives on the machine. The app version (`MARKETING_VERSION`) must match
-the tag. Mount integration tests still run locally via `scripts/validate-all.sh`
-because FSKit enablement is per-user machine state.
+`.github/workflows/release.yml` and runs in a fresh **Tart macOS VM** for each
+job, with Xcode 27 / macOS 27. Jobs require the labels `self-hosted`, `macOS`,
+`ARM64`, `tart-macos`, and `tart-run-<run_id>-<run_attempt>`.
+A user LaunchAgent on the host polls this repository and opencode-cloud-link
+every two minutes, sharing one VM slot. The VM and runner are removed after each
+job; jobs wait while the host is asleep or logged out. A manual dispatch uploads
+the notarized DMG as `macntfs-tart-installer` for seven days without publishing a
+GitHub release. The app version (`MARKETING_VERSION`) must match the release tag.
+Mount integration tests still run locally via `scripts/validate-all.sh` because
+FSKit enablement is per-user machine state.
 
 Required repository secrets:
 
@@ -125,8 +127,9 @@ Required repository secrets:
 Export the certificate once: Keychain Access → My Certificates → "Developer ID
 Application: …" → Export…, save as .p12 with a password, then
 `base64 -i cert.p12 | pbcopy` and paste into the `DEVELOPER_ID_P12` secret.
-If the runner machine already has the certificate in its login keychain, the
-`DEVELOPER_ID_P12` / `DEVELOPER_ID_P12_PASSWORD` secrets can be left unset.
+Both certificate secrets are required in CI. The workflow imports the identity
+into a temporary keychain and restores the keychain list afterward. The base VM
+image contains no signing identities or App Store Connect credentials.
 
 The same installer can be produced locally:
 
@@ -135,8 +138,8 @@ CONFIG=Release ./scripts/build-signed.sh
 ./scripts/make-installer.sh          # notarizes and staples when ASC_* are set
 ```
 
-CI builds and notarizes on hosted runners; mount integration tests still require
-a self-hosted Mac because FSKit module enablement is per-user machine state.
+CI builds and notarizes in disposable Tart VMs; mount integration tests still
+require a configured Mac because FSKit module enablement is per-user machine state.
 
 ## Install, use, uninstall
 
