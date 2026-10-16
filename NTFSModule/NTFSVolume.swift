@@ -25,7 +25,11 @@ func ntfsStatusError(_ status: ntfs_bridge_status, readOnly: Bool = false) -> NS
 }
 
 private final class DirectoryEmitBox {
-    var entries: [(name: String, type: ntfs_bridge_entry_type, inode: UInt64)] = []
+    var entries: [(name: String, type: ntfs_bridge_entry_type, inode: UInt64, cookie: UInt64)] = []
+    let limit: Int
+    init(limit: Int) {
+        self.limit = limit
+    }
 }
 
 private let directoryEmitCallback: ntfs_bridge_dir_emit = { context, entry in
@@ -37,21 +41,33 @@ private let directoryEmitCallback: ntfs_bridge_dir_emit = { context, entry in
     let name = withUnsafePointer(to: &copy.name) { pointer in
         String(cString: UnsafeRawPointer(pointer).assumingMemoryBound(to: CChar.self))
     }
-    box.entries.append((name, copy.type, copy.file_id))
-    return true
+    box.entries.append((name, copy.type, copy.file_id, copy.cookie))
+    return box.entries.count < box.limit
 }
 
 /// The NTFS volume as seen by FSKit. Owns the bridge and the device shim; all
 /// bridge calls run serialized on `queue` because libntfs-3g is not
 /// thread-safe per volume and the extension may receive concurrent FSKit
 /// callbacks.
-final class NTFSVolume: FSVolume {
+///
+/// FSKit revised its volume protocols in macOS 27: `FSVolume.Operations` and
+/// `FSVolume.ReadWriteOperations` (the original 15.4 API) were replaced by the
+/// async `FSVolume.Handler` and `FSVolume.ReadWriteHandler`. The supported
+/// floor is macOS 26, which is V1-only, so both adapters are needed: this base
+/// holds everything version-independent and the file system picks one per OS.
+class NTFSVolumeBase: FSVolume {
+    /// Maximum entries collected from the bridge per enumeration call; larger
+    /// batches trade memory for fewer round trips with FSKit.
+    static let enumerationBatchSize = 256
+    /// Resume token that means "the enumeration is finished".
+    static let endCookie = UInt64.max
+
     private var bridge: OpaquePointer?
     private let shim: NTFSDeviceShim
     private let queue = DispatchQueue(label: "com.github.alvarolorentedev.macntfs.bridge")
     private var items: [UInt64: NTFSItem] = [:]
-    private var cachedRoot: NTFSItem?
-    private let logger = Logger(subsystem: "com.github.alvarolorentedev.macntfs.ntfsmodule", category: "volume")
+    var cachedRoot: NTFSItem?
+    let logger = Logger(subsystem: "com.github.alvarolorentedev.macntfs.ntfsmodule", category: "volume")
 
     init(bridge: OpaquePointer, shim: NTFSDeviceShim, readOnly: Bool, volumeName: String) {
         self.bridge = bridge
@@ -65,11 +81,21 @@ final class NTFSVolume: FSVolume {
         }
     }
 
-    private var bridgeReadOnly: Bool {
+    deinit {
+        // Last-resort flush and release: FSKit normally deactivates first, but
+        // an unload without deactivation must not leak the open volume.
+        closeBridge()
+    }
+
+    var bridgeReadOnly: Bool {
         queue.sync { bridge.map { ntfs_bridge_is_read_only($0) } ?? true }
     }
 
-    private func withBridge<T>(_ body: (OpaquePointer) -> T) throws -> T {
+    var hasOpenBridge: Bool {
+        queue.sync { bridge != nil }
+    }
+
+    func withBridge<T>(_ body: (OpaquePointer) -> T) throws -> T {
         try queue.sync {
             guard let bridge else {
                 throw POSIXError(.EIO)
@@ -78,7 +104,7 @@ final class NTFSVolume: FSVolume {
         }
     }
 
-    private func cachedItem(inode: UInt64, parentInode: UInt64, name: FSFileName, path: String) -> NTFSItem {
+    func cachedItem(inode: UInt64, parentInode: UInt64, name: FSFileName, path: String) -> NTFSItem {
         queue.sync {
             if let existing = items[inode] {
                 existing.parentInode = parentInode
@@ -92,22 +118,30 @@ final class NTFSVolume: FSVolume {
         }
     }
 
-    private func childPath(_ parent: String, _ name: String) -> String {
+    func childPath(_ parent: String, _ name: String) -> String {
         parent == "/" ? "/\(name)" : "\(parent)/\(name)"
     }
 
-    private func makeTimespec(_ ns: Int64) -> timespec {
+    func removeCachedItem(inode: UInt64) {
+        queue.sync { _ = items.removeValue(forKey: inode) }
+    }
+
+    func makeTimespec(_ ns: Int64) -> timespec {
         timespec(tv_sec: Int(ns / 1_000_000_000), tv_nsec: Int(ns % 1_000_000_000))
     }
 
-    private func result<T>(_ value: T?) throws -> T {
+    func nanoseconds(_ value: timespec) -> Int64 {
+        Int64(value.tv_sec) * 1_000_000_000 + Int64(value.tv_nsec)
+    }
+
+    func result<T>(_ value: T?) throws -> T {
         guard let value else {
             throw POSIXError(.EINVAL)
         }
         return value
     }
 
-    private func fill(_ target: FSItem.Attributes, from raw: ntfs_bridge_attrs) {
+    func fill(_ target: FSItem.Attributes, from raw: ntfs_bridge_attrs) {
         target.fileID = FSItem.Identifier(rawValue: raw.file_id) ?? .invalid
         target.type = raw.is_directory ? .directory : .file
         target.size = raw.size
@@ -125,7 +159,7 @@ final class NTFSVolume: FSVolume {
     }
 
     @discardableResult
-    private func refreshAttributes(of item: NTFSItem) -> FSItem.Attributes {
+    func refreshAttributes(of item: NTFSItem) -> FSItem.Attributes {
         var raw = ntfs_bridge_attrs()
         if let status = try? withBridge({ ntfs_bridge_getattr_inode($0, item.inode, &raw) }),
            status == NTFS_BRIDGE_OK {
@@ -134,7 +168,7 @@ final class NTFSVolume: FSVolume {
         return item.attributes
     }
 
-    fileprivate func closeBridge() {
+    func closeBridge() {
         queue.sync {
             if let bridge {
                 let status = ntfs_bridge_close(bridge)
@@ -149,16 +183,7 @@ final class NTFSVolume: FSVolume {
     }
 }
 
-extension NTFSVolume: FSVolume.PathConfOperations {
-    var maximumLinkCount: Int { -1 }
-    var maximumNameLength: Int { 255 }
-    var restrictsOwnershipChanges: Bool { false }
-    var truncatesLongNames: Bool { false }
-    var maximumXattrSize: Int { 0 }
-    var maximumFileSize: UInt64 { UInt64.max }
-}
-
-extension NTFSVolume: FSVolume.Handler {
+extension NTFSVolumeBase: FSVolume.CommonOperations {
     var supportedVolumeCapabilities: FSVolume.SupportedCapabilities {
         let capabilities = FSVolume.SupportedCapabilities()
         capabilities.supportsHardLinks = false
@@ -186,6 +211,57 @@ extension NTFSVolume: FSVolume.Handler {
         return result
     }
 
+    func mount(options: FSTaskOptions, replyHandler: @escaping ((any Error)?) -> Void) {
+        logger.notice("mounted \(self.bridgeReadOnly ? "read-only" : "read-write", privacy: .public)")
+        replyHandler(nil)
+    }
+
+    func unmount(replyHandler: @escaping () -> Void) {
+        if let status = try? withBridge({ ntfs_bridge_sync($0) }), status != NTFS_BRIDGE_OK {
+            logger.error("sync during unmount failed: \(String(cString: ntfs_bridge_strerror(status)), privacy: .public)")
+        }
+        replyHandler()
+    }
+
+    func synchronize(flags: FSSyncFlags, replyHandler: @escaping ((any Error)?) -> Void) {
+        do {
+            let status = try withBridge { ntfs_bridge_sync($0) }
+            if status != NTFS_BRIDGE_OK {
+                replyHandler(ntfsStatusError(status))
+                return
+            }
+            replyHandler(nil)
+        } catch {
+            replyHandler(error)
+        }
+    }
+
+    func reclaimItem(_ item: FSItem, replyHandler: @escaping ((any Error)?) -> Void) {
+        guard let item = item as? NTFSItem, item.inode != UInt64(NTFS_BRIDGE_ROOT_INODE) else {
+            replyHandler(nil)
+            return
+        }
+        removeCachedItem(inode: item.inode)
+        replyHandler(nil)
+    }
+}
+
+extension NTFSVolumeBase: FSVolume.PathConfOperations {
+    var maximumLinkCount: Int { -1 }
+    var maximumNameLength: Int { 255 }
+    var restrictsOwnershipChanges: Bool { false }
+    var truncatesLongNames: Bool { false }
+    var maximumXattrSize: Int { 0 }
+    var maximumFileSize: UInt64 { UInt64.max }
+}
+
+// MARK: - macOS 27 adapter
+
+@available(macOS 27.0, *)
+final class NTFSVolumeV3: NTFSVolumeBase {}
+
+@available(macOS 27.0, *)
+extension NTFSVolumeV3: FSVolume.Handler {
     func activateVolume(options: FSTaskOptions) async throws -> FSActivateResult {
         let root = cachedItem(inode: UInt64(NTFS_BRIDGE_ROOT_INODE),
                               parentInode: UInt64(NTFS_BRIDGE_ROOT_INODE),
@@ -198,23 +274,6 @@ extension NTFSVolume: FSVolume.Handler {
 
     func deactivateVolume(options: FSDeactivateOptions) async throws {
         closeBridge()
-    }
-
-    func mount(options: FSTaskOptions) async throws {
-        logger.notice("mounted \(self.bridgeReadOnly ? "read-only" : "read-write", privacy: .public)")
-    }
-
-    func unmount() async {
-        if let status = try? withBridge({ ntfs_bridge_sync($0) }), status != NTFS_BRIDGE_OK {
-            logger.error("sync during unmount failed: \(String(cString: ntfs_bridge_strerror(status)), privacy: .public)")
-        }
-    }
-
-    func synchronize(flags: FSSyncFlags) async throws {
-        let status = try withBridge { ntfs_bridge_sync($0) }
-        if status != NTFS_BRIDGE_OK {
-            throw ntfsStatusError(status)
-        }
     }
 
     func lookupItem(named name: FSFileName, in directory: FSItem, context: FSContext) async throws -> FSLookupItemResult {
@@ -231,15 +290,6 @@ extension NTFSVolume: FSVolume.Handler {
         let item = cachedItem(inode: inode, parentInode: directory.inode, name: name, path: path)
         fill(item.attributes, from: raw)
         return try result(FSLookupItemResult(foundItem: item, itemName: name, itemAttributes: item.attributes))
-    }
-
-    func reclaimItem(_ item: FSItem) async throws {
-        guard let item = item as? NTFSItem, item.inode != UInt64(NTFS_BRIDGE_ROOT_INODE) else {
-            return
-        }
-        queue.sync {
-            items.removeValue(forKey: item.inode)
-        }
     }
 
     func createItem(named name: FSFileName,
@@ -313,9 +363,7 @@ extension NTFSVolume: FSVolume.Handler {
         }
         let overAttributes = (overItem as? NTFSItem)?.attributes
         if let overItem = overItem as? NTFSItem {
-            queue.sync {
-                items.removeValue(forKey: overItem.inode)
-            }
+            removeCachedItem(inode: overItem.inode)
         }
         item.name = destinationName
         item.path = to
@@ -333,20 +381,22 @@ extension NTFSVolume: FSVolume.Handler {
                     named name: FSFileName,
                     from directory: FSItem,
                     context: FSContext) async throws -> FSRemoveItemResult {
-        guard let item = item as? NTFSItem, let directory = directory as? NTFSItem else {
+        guard let item = item as? NTFSItem,
+              let directory = directory as? NTFSItem,
+              let nameString = name.string else {
             throw POSIXError(.EINVAL)
         }
         if bridgeReadOnly {
             throw POSIXError(.EROFS)
         }
         let removedAttributes = item.attributes
-        let status = try withBridge { ntfs_bridge_unlink($0, item.path) }
+        // Build the path from the live parent: `item.path` goes stale when an
+        // ancestor directory was renamed since the item was last looked up.
+        let status = try withBridge { ntfs_bridge_unlink($0, childPath(directory.path, nameString)) }
         guard status == NTFS_BRIDGE_OK else {
             throw ntfsStatusError(status)
         }
-        queue.sync {
-            items.removeValue(forKey: item.inode)
-        }
+        removeCachedItem(inode: item.inode)
         return try result(FSRemoveItemResult(itemAttributes: removedAttributes,
                                              directoryAttributes: refreshAttributes(of: directory),
                                              freeSpace: nil))
@@ -367,11 +417,34 @@ extension NTFSVolume: FSVolume.Handler {
         guard let item = item as? NTFSItem else {
             throw POSIXError(.EINVAL)
         }
-        if newAttributes.isValid(.size), item.attributes.type != .directory {
+        let setsSize = newAttributes.isValid(.size) && item.attributes.type != .directory
+        let setsAccessTime = newAttributes.isValid(.accessTime)
+        let setsModifyTime = newAttributes.isValid(.modifyTime)
+        if (setsSize || setsAccessTime || setsModifyTime) && bridgeReadOnly {
+            throw POSIXError(.EROFS)
+        }
+        if setsSize {
             let status = try withBridge { ntfs_bridge_truncate_inode($0, item.inode, newAttributes.size) }
             guard status == NTFS_BRIDGE_OK else {
                 throw ntfsStatusError(status)
             }
+            newAttributes.consumedAttributes.insert(.size)
+        }
+        if setsAccessTime || setsModifyTime {
+            // Ignoring these would make touch(1) and cp -p report success while
+            // nothing changed.
+            let accessNs = setsAccessTime ? nanoseconds(newAttributes.accessTime) : 0
+            let modifyNs = setsModifyTime ? nanoseconds(newAttributes.modifyTime) : 0
+            let status = try withBridge {
+                ntfs_bridge_set_times_inode($0, item.inode,
+                                            setsAccessTime, accessNs,
+                                            setsModifyTime, modifyNs)
+            }
+            guard status == NTFS_BRIDGE_OK else {
+                throw ntfsStatusError(status)
+            }
+            if setsAccessTime { newAttributes.consumedAttributes.insert(.accessTime) }
+            if setsModifyTime { newAttributes.consumedAttributes.insert(.modifyTime) }
         }
         return try result(FSSetAttributesResult(attributes: refreshAttributes(of: item), freeSpace: nil))
     }
@@ -382,46 +455,7 @@ extension NTFSVolume: FSVolume.Handler {
                             attributes: FSItem.GetAttributesRequest?,
                             packer: FSDirectoryEntryPacker,
                             context: FSContext) async throws -> FSEnumerateDirectoryResult {
-        guard let directory = directory as? NTFSItem else {
-            throw POSIXError(.EINVAL)
-        }
-        let box = DirectoryEmitBox()
-        let status = try withBridge { bridge -> ntfs_bridge_status in
-            withExtendedLifetime(box) {
-                ntfs_bridge_readdir_inode(bridge, directory.inode,
-                                          directoryEmitCallback,
-                                          Unmanaged.passUnretained(box).toOpaque())
-            }
-        }
-        guard status == NTFS_BRIDGE_OK else {
-            throw ntfsStatusError(status)
-        }
-        var entries = box.entries
-        if attributes == nil {
-            entries.insert((".", NTFS_BRIDGE_TYPE_DIRECTORY, directory.inode), at: 0)
-            entries.insert(("..", NTFS_BRIDGE_TYPE_DIRECTORY, directory.parentInode), at: 0)
-        }
-        var index = Int(cookie.rawValue)
-        while index < entries.count {
-            let entry = entries[index]
-            var itemAttributes: FSItem.Attributes?
-            if attributes != nil {
-                var raw = ntfs_bridge_attrs()
-                if let getStatus = try? withBridge({ ntfs_bridge_getattr_inode($0, entry.inode, &raw) }),
-                   getStatus == NTFS_BRIDGE_OK {
-                    let filled = FSItem.Attributes()
-                    fill(filled, from: raw)
-                    itemAttributes = filled
-                }
-            }
-            _ = packer.packEntry(name: FSFileName(string: entry.name),
-                                 itemType: entry.type == NTFS_BRIDGE_TYPE_DIRECTORY ? .directory : .file,
-                                 itemID: FSItem.Identifier(rawValue: entry.inode) ?? .invalid,
-                                 nextCookie: FSDirectoryCookie(UInt64(index + 1)),
-                                 attributes: itemAttributes)
-            index += 1
-        }
-        return try result(FSEnumerateDirectoryResult(verifier: 1))
+        return try result(FSEnumerateDirectoryResult(verifier: enumerate(directory, startingAt: cookie, attributes: attributes, packer: packer).rawValue))
     }
 
     func readSymbolicLink(_ item: FSItem, context: FSContext) async throws -> FSReadSymlinkResult {
@@ -429,7 +463,8 @@ extension NTFSVolume: FSVolume.Handler {
     }
 }
 
-extension NTFSVolume: FSVolume.ReadWriteHandler {
+@available(macOS 27.0, *)
+extension NTFSVolumeV3: FSVolume.ReadWriteHandler {
     func read(from item: FSItem, at offset: off_t, length: Int, into buffer: FSMutableFileDataBuffer) async throws -> FSReadFileResult {
         guard let item = item as? NTFSItem else {
             throw POSIXError(.EINVAL)
@@ -466,5 +501,405 @@ extension NTFSVolume: FSVolume.ReadWriteHandler {
         return try result(FSWriteFileResult(bytesWritten: actuallyWritten,
                                             itemAttributes: refreshAttributes(of: item),
                                             freeSpace: nil))
+    }
+}
+
+// MARK: - macOS 26 adapter
+
+final class NTFSVolumeV1: NTFSVolumeBase {}
+
+// The V1 volume protocols are deprecated in macOS 27 in favor of FSVolume.Handler;
+// they are the only volume API on macOS 26, which is why this adapter exists.
+@available(macOS, deprecated: 27.0)
+extension NTFSVolumeV1: FSVolume.Operations {
+    func activate(options: FSTaskOptions, replyHandler: @escaping (FSItem?, (any Error)?) -> Void) {
+        let root = cachedItem(inode: UInt64(NTFS_BRIDGE_ROOT_INODE),
+                              parentInode: UInt64(NTFS_BRIDGE_ROOT_INODE),
+                              name: FSFileName(string: "/"),
+                              path: "/")
+        refreshAttributes(of: root)
+        cachedRoot = root
+        replyHandler(root, nil)
+    }
+
+    func deactivate(options: FSDeactivateOptions, replyHandler: @escaping ((any Error)?) -> Void) {
+        closeBridge()
+        replyHandler(nil)
+    }
+
+    func lookupItem(named name: FSFileName,
+                    inDirectory directory: FSItem,
+                    replyHandler: @escaping (FSItem?, FSFileName?, (any Error)?) -> Void) {
+        guard let directory = directory as? NTFSItem, let nameString = name.string else {
+            replyHandler(nil, nil, POSIXError(.EINVAL))
+            return
+        }
+        do {
+            var inode: UInt64 = 0
+            var raw = ntfs_bridge_attrs()
+            let status = try withBridge { ntfs_bridge_lookup($0, directory.inode, nameString, &inode, &raw) }
+            guard status == NTFS_BRIDGE_OK else {
+                replyHandler(nil, nil, ntfsStatusError(status))
+                return
+            }
+            let path = childPath(directory.path, nameString)
+            let item = cachedItem(inode: inode, parentInode: directory.inode, name: name, path: path)
+            fill(item.attributes, from: raw)
+            replyHandler(item, name, nil)
+        } catch {
+            replyHandler(nil, nil, error)
+        }
+    }
+
+    func createItem(named name: FSFileName,
+                    type: FSItem.ItemType,
+                    inDirectory directory: FSItem,
+                    attributes: FSItem.SetAttributesRequest,
+                    replyHandler: @escaping (FSItem?, FSFileName?, (any Error)?) -> Void) {
+        guard let directory = directory as? NTFSItem, let nameString = name.string else {
+            replyHandler(nil, nil, POSIXError(.EINVAL))
+            return
+        }
+        guard type == .file || type == .directory else {
+            replyHandler(nil, nil, POSIXError(.ENOTSUP))
+            return
+        }
+        if bridgeReadOnly {
+            replyHandler(nil, nil, POSIXError(.EROFS))
+            return
+        }
+        do {
+            let path = childPath(directory.path, nameString)
+            let status = try withBridge { ntfs_bridge_create($0, path, type == .directory) }
+            guard status == NTFS_BRIDGE_OK else {
+                replyHandler(nil, nil, ntfsStatusError(status))
+                return
+            }
+            var inode: UInt64 = 0
+            var raw = ntfs_bridge_attrs()
+            let lookupStatus = try withBridge { ntfs_bridge_lookup($0, directory.inode, nameString, &inode, &raw) }
+            guard lookupStatus == NTFS_BRIDGE_OK else {
+                replyHandler(nil, nil, ntfsStatusError(lookupStatus))
+                return
+            }
+            let item = cachedItem(inode: inode, parentInode: directory.inode, name: name, path: path)
+            fill(item.attributes, from: raw)
+            replyHandler(item, name, nil)
+        } catch {
+            replyHandler(nil, nil, error)
+        }
+    }
+
+    func createSymbolicLink(named name: FSFileName,
+                            inDirectory directory: FSItem,
+                            attributes: FSItem.SetAttributesRequest,
+                            linkContents contents: FSFileName,
+                            replyHandler: @escaping (FSItem?, FSFileName?, (any Error)?) -> Void) {
+        replyHandler(nil, nil, POSIXError(.ENOTSUP))
+    }
+
+    func createLink(to item: FSItem,
+                    named name: FSFileName,
+                    inDirectory directory: FSItem,
+                    replyHandler: @escaping (FSFileName?, (any Error)?) -> Void) {
+        replyHandler(nil, POSIXError(.ENOTSUP))
+    }
+
+    func renameItem(_ item: FSItem,
+                    inDirectory sourceDirectory: FSItem,
+                    named sourceName: FSFileName,
+                    to destinationName: FSFileName,
+                    inDirectory destinationDirectory: FSItem,
+                    overItem: FSItem?,
+                    replyHandler: @escaping (FSFileName?, (any Error)?) -> Void) {
+        guard let item = item as? NTFSItem,
+              let sourceDirectory = sourceDirectory as? NTFSItem,
+              let destinationDirectory = destinationDirectory as? NTFSItem,
+              let sourceString = sourceName.string,
+              let destinationString = destinationName.string else {
+            replyHandler(nil, POSIXError(.EINVAL))
+            return
+        }
+        if bridgeReadOnly {
+            replyHandler(nil, POSIXError(.EROFS))
+            return
+        }
+        do {
+            let from = childPath(sourceDirectory.path, sourceString)
+            let to = childPath(destinationDirectory.path, destinationString)
+            let status = try withBridge { ntfs_bridge_rename($0, from, to) }
+            guard status == NTFS_BRIDGE_OK else {
+                replyHandler(nil, ntfsStatusError(status))
+                return
+            }
+            if let overItem = overItem as? NTFSItem {
+                removeCachedItem(inode: overItem.inode)
+            }
+            item.name = destinationName
+            item.path = to
+            item.parentInode = destinationDirectory.inode
+            refreshAttributes(of: item)
+            replyHandler(destinationName, nil)
+        } catch {
+            replyHandler(nil, error)
+        }
+    }
+
+    func removeItem(_ item: FSItem,
+                    named name: FSFileName,
+                    fromDirectory directory: FSItem,
+                    replyHandler: @escaping ((any Error)?) -> Void) {
+        guard let item = item as? NTFSItem,
+              let directory = directory as? NTFSItem,
+              let nameString = name.string else {
+            replyHandler(POSIXError(.EINVAL))
+            return
+        }
+        if bridgeReadOnly {
+            replyHandler(POSIXError(.EROFS))
+            return
+        }
+        do {
+            // Build the path from the live parent: `item.path` goes stale when an
+            // ancestor directory was renamed since the item was last looked up.
+            let status = try withBridge { ntfs_bridge_unlink($0, childPath(directory.path, nameString)) }
+            guard status == NTFS_BRIDGE_OK else {
+                replyHandler(ntfsStatusError(status))
+                return
+            }
+            removeCachedItem(inode: item.inode)
+            replyHandler(nil)
+        } catch {
+            replyHandler(error)
+        }
+    }
+
+    func getAttributes(_ desiredAttributes: FSItem.GetAttributesRequest,
+                       of item: FSItem,
+                       replyHandler: @escaping (FSItem.Attributes?, (any Error)?) -> Void) {
+        guard let item = item as? NTFSItem else {
+            replyHandler(nil, POSIXError(.EINVAL))
+            return
+        }
+        replyHandler(refreshAttributes(of: item), nil)
+    }
+
+    func setAttributes(_ newAttributes: FSItem.SetAttributesRequest,
+                       on item: FSItem,
+                       replyHandler: @escaping (FSItem.Attributes?, (any Error)?) -> Void) {
+        guard let item = item as? NTFSItem else {
+            replyHandler(nil, POSIXError(.EINVAL))
+            return
+        }
+        let setsSize = newAttributes.isValid(.size) && item.attributes.type != .directory
+        let setsAccessTime = newAttributes.isValid(.accessTime)
+        let setsModifyTime = newAttributes.isValid(.modifyTime)
+        if (setsSize || setsAccessTime || setsModifyTime) && bridgeReadOnly {
+            replyHandler(nil, POSIXError(.EROFS))
+            return
+        }
+        do {
+            if setsSize {
+                let status = try withBridge { ntfs_bridge_truncate_inode($0, item.inode, newAttributes.size) }
+                guard status == NTFS_BRIDGE_OK else {
+                    replyHandler(nil, ntfsStatusError(status))
+                    return
+                }
+                newAttributes.consumedAttributes.insert(.size)
+            }
+            if setsAccessTime || setsModifyTime {
+                // Ignoring these would make touch(1) and cp -p report success while
+                // nothing changed.
+                let accessNs = setsAccessTime ? nanoseconds(newAttributes.accessTime) : 0
+                let modifyNs = setsModifyTime ? nanoseconds(newAttributes.modifyTime) : 0
+                let status = try withBridge {
+                    ntfs_bridge_set_times_inode($0, item.inode,
+                                                setsAccessTime, accessNs,
+                                                setsModifyTime, modifyNs)
+                }
+                guard status == NTFS_BRIDGE_OK else {
+                    replyHandler(nil, ntfsStatusError(status))
+                    return
+                }
+                if setsAccessTime { newAttributes.consumedAttributes.insert(.accessTime) }
+                if setsModifyTime { newAttributes.consumedAttributes.insert(.modifyTime) }
+            }
+            replyHandler(refreshAttributes(of: item), nil)
+        } catch {
+            replyHandler(nil, error)
+        }
+    }
+
+    func enumerateDirectory(_ directory: FSItem,
+                            startingAt cookie: FSDirectoryCookie,
+                            verifier: FSDirectoryVerifier,
+                            attributes: FSItem.GetAttributesRequest?,
+                            packer: FSDirectoryEntryPacker,
+                            replyHandler: @escaping (FSDirectoryVerifier, (any Error)?) -> Void) {
+        do {
+            let verifier = try enumerate(directory, startingAt: cookie, attributes: attributes, packer: packer)
+            replyHandler(verifier, nil)
+        } catch {
+            replyHandler(FSDirectoryVerifier(rawValue: 1), error)
+        }
+    }
+
+    func readSymbolicLink(_ item: FSItem, replyHandler: @escaping (FSFileName?, (any Error)?) -> Void) {
+        replyHandler(nil, POSIXError(.ENOTSUP))
+    }
+}
+
+@available(macOS, deprecated: 27.0)
+extension NTFSVolumeV1: FSVolume.ReadWriteOperations {
+    func read(from item: FSItem,
+              at offset: off_t,
+              length: Int,
+              into buffer: FSMutableFileDataBuffer,
+              replyHandler: @escaping (Int, (any Error)?) -> Void) {
+        guard let item = item as? NTFSItem else {
+            replyHandler(0, POSIXError(.EINVAL))
+            return
+        }
+        do {
+            var actuallyRead = 0
+            let status = try withBridge { bridge -> ntfs_bridge_status in
+                buffer.withUnsafeMutableBytes { raw in
+                    ntfs_bridge_read_inode(bridge, item.inode, UInt64(offset), raw.baseAddress, length, &actuallyRead)
+                }
+            }
+            guard status == NTFS_BRIDGE_OK else {
+                replyHandler(0, ntfsStatusError(status))
+                return
+            }
+            replyHandler(actuallyRead, nil)
+        } catch {
+            replyHandler(0, error)
+        }
+    }
+
+    func write(contents: Data,
+               to item: FSItem,
+               at offset: off_t,
+               replyHandler: @escaping (Int, (any Error)?) -> Void) {
+        guard let item = item as? NTFSItem else {
+            replyHandler(0, POSIXError(.EINVAL))
+            return
+        }
+        if bridgeReadOnly {
+            logger.notice("write refused: volume is read-only")
+            replyHandler(0, POSIXError(.EROFS))
+            return
+        }
+        do {
+            var actuallyWritten = 0
+            let status = try withBridge { bridge -> ntfs_bridge_status in
+                contents.withUnsafeBytes { raw in
+                    ntfs_bridge_write_inode(bridge, item.inode, UInt64(offset), raw.baseAddress, contents.count, &actuallyWritten)
+                }
+            }
+            guard status == NTFS_BRIDGE_OK else {
+                replyHandler(0, ntfsStatusError(status))
+                return
+            }
+            replyHandler(actuallyWritten, nil)
+        } catch {
+            replyHandler(0, error)
+        }
+    }
+}
+
+// MARK: - Shared enumeration
+
+extension NTFSVolumeBase {
+    /// Collects one batch of directory entries and packs them for FSKit,
+    /// returning the resume verifier. Shared by both API generations because
+    /// the packer type and the cookie/verifier semantics are identical.
+    func enumerate(_ directory: FSItem,
+                   startingAt cookie: FSDirectoryCookie,
+                   attributes: FSItem.GetAttributesRequest?,
+                   packer: FSDirectoryEntryPacker) throws -> FSDirectoryVerifier {
+        guard let directory = directory as? NTFSItem else {
+            throw POSIXError(.EINVAL)
+        }
+        if cookie.rawValue == Self.endCookie {
+            return FSDirectoryVerifier(rawValue: 1)
+        }
+
+        // FSKit asks the volume for "." and ".." when it doesn't need
+        // attributes; the resume tokens 0 and 1 belong to them. The bridge
+        // itself filters the library's own "." and ".." entries, so a resume
+        // token is passed to it unchanged.
+        var synthetic: [(name: String, inode: UInt64, resumeToken: UInt64)] = []
+        if attributes == nil {
+            if cookie.rawValue == 0 {
+                synthetic = [(".", directory.inode, 0), ("..", directory.parentInode, 1)]
+            } else if cookie.rawValue == 1 {
+                synthetic = [("..", directory.parentInode, 1)]
+            }
+        }
+
+        let box = DirectoryEmitBox(limit: Self.enumerationBatchSize + 1)
+        let status = try withBridge { bridge -> ntfs_bridge_status in
+            withExtendedLifetime(box) {
+                ntfs_bridge_readdir_inode(bridge, directory.inode, cookie.rawValue,
+                                          directoryEmitCallback,
+                                          Unmanaged.passUnretained(box).toOpaque())
+            }
+        }
+        guard status == NTFS_BRIDGE_OK else {
+            throw ntfsStatusError(status)
+        }
+
+        // The last entry of a full batch stays unpacked: its token is the
+        // resume point for the next call. The bridge re-emits the entry at
+        // the token it is given, so every packed entry carries the token of
+        // its successor and nothing is skipped or repeated.
+        let entries = box.entries
+        let batchIsFull = entries.count > Self.enumerationBatchSize
+        let packable = entries.prefix(batchIsFull ? entries.count - 1 : entries.count)
+        let pendingToken = batchIsFull ? entries[entries.count - 1].cookie : Self.endCookie
+
+        var sequence: [(name: String, type: ntfs_bridge_entry_type, inode: UInt64, resumeToken: UInt64)] = []
+        for item in synthetic {
+            sequence.append((item.name, NTFS_BRIDGE_TYPE_DIRECTORY, item.inode, item.resumeToken))
+        }
+        for entry in packable {
+            sequence.append((entry.name, entry.type, entry.inode, entry.cookie))
+        }
+        guard !sequence.isEmpty else {
+            return FSDirectoryVerifier(rawValue: 1)
+        }
+
+        var itemAttributes = [FSItem.Attributes?](repeating: nil, count: sequence.count)
+        if attributes != nil, !packable.isEmpty {
+            // One serialized pass fetches the attributes for the batch.
+            itemAttributes = try withBridge { bridge in
+                packable.map { entry in
+                    var raw = ntfs_bridge_attrs()
+                    guard ntfs_bridge_getattr_inode(bridge, entry.inode, &raw) == NTFS_BRIDGE_OK else {
+                        return nil
+                    }
+                    let filled = FSItem.Attributes()
+                    fill(filled, from: raw)
+                    return filled
+                }
+            }
+        }
+
+        var index = 0
+        while index < sequence.count {
+            let item = sequence[index]
+            let nextCookie = index + 1 < sequence.count ? sequence[index + 1].resumeToken : pendingToken
+            let packed = packer.packEntry(name: FSFileName(string: item.name),
+                                          itemType: item.type == NTFS_BRIDGE_TYPE_DIRECTORY ? .directory : .file,
+                                          itemID: FSItem.Identifier(rawValue: item.inode) ?? .invalid,
+                                          nextCookie: FSDirectoryCookie(nextCookie),
+                                          attributes: itemAttributes[index])
+            if !packed {
+                break
+            }
+            index += 1
+        }
+        return FSDirectoryVerifier(rawValue: 1)
     }
 }

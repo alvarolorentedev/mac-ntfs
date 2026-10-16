@@ -105,7 +105,14 @@ enum ModuleEnabler {
         if FileManager.default.fileExists(atPath: url.path) {
             let data = try Data(contentsOf: url)
             let plist = try PropertyListSerialization.propertyList(from: data, options: [], format: &format)
-            modules = plist as? [String] ?? []
+            guard let existing = plist as? [String] else {
+                // Never overwrite a list we do not understand: it may hold
+                // other modules' enablement.
+                throw NSError(domain: "MacNTFS", code: 1, userInfo: [
+                    NSLocalizedDescriptionKey: "the existing FSKit enablement list has an unexpected format",
+                ])
+            }
+            modules = existing
         } else {
             try FileManager.default.createDirectory(at: url.deletingLastPathComponent(),
                                                     withIntermediateDirectories: true)

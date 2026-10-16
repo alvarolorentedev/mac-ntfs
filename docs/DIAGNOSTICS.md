@@ -14,6 +14,20 @@ Symptoms observed while building and using MacNTFS, with causes and actions.
   (or toggle it in System Settings → Login Items & Extensions → File System
   Extensions). `MacNTFS --extension-status` prints the live state.
 
+## `extension: Not registered` while `pluginkit` lists the module
+
+- **Cause:** another copy of the app bundle is registered (local build, CI
+  runner checkout, an old download). Plug-in registration is per bundle ID and
+  the stale path wins; FSKit then reports the module as not registered.
+- **Check:** `pluginkit -m -i com.github.alvarolorentedev.macntfs.ntfsmodule -vv`
+  — compare `Path` with the app you are launching.
+- **Action:** unregister the stale copy and register the real one, then
+  re-enable:
+  `pluginkit -r <stale-appex>`, `pluginkit -a <appex>`,
+  `pkill -9 -f NTFSModule.appex`, `MacNTFS --enable-extension`.
+- **Note:** ad-hoc or `COMPILE_ONLY=1` builds cannot be enabled — AMFI kills
+  the extension. Always enable a build produced by `scripts/build-signed.sh`.
+
 ## `mount: Module ... is disabled!`
 
 - **Cause:** the per-user FSKit enablement list does not contain the module.
@@ -31,7 +45,7 @@ Symptoms observed while building and using MacNTFS, with causes and actions.
 ## `No Accounts` / `No profiles ... were found`
 
 - **Cause:** no signing credentials available to `xcodebuild`.
-- **Action:** follow "Signing" in the README (App Store Connect API key →
+- **Action:** follow "Signing" in `docs/DEVELOPMENT.md` (App Store Connect API key →
   `create-dev-id-profiles.sh` → `build-signed.sh`).
 
 ## Mount through Disk Arbitration fails with ENOPROTOOPT (0xC05C)
