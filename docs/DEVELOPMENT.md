@@ -44,8 +44,8 @@ docs/                    this guide, validation checklist and diagnostics guide
 Prerequisites:
 
 - macOS 27 with Xcode 27.
-- Build-time only for the engine: `curl` (present on macOS) and `pkg-config`
-  (`brew install pkgconf`). Nothing requires Homebrew at runtime.
+- Build-time only for the engine: Xcode command line tools (`curl`, `tar`,
+  `make` are present on macOS). No Homebrew at build or runtime.
 - Signing credentials for the Apple Developer team that owns the FSKit
   capabilities (see "Signing" below).
 
