@@ -55,6 +55,18 @@ fi
 
 cd "$SRC_DIR"
 
+# Local fixes to the pinned release, applied once per extracted tree. Each
+# patch documents the upstream bug it fixes (see patches/).
+for patch_file in "$REPO_ROOT"/patches/*.patch; do
+    [ -e "$patch_file" ] || continue
+    marker=".macntfs-applied-$(basename "$patch_file")"
+    if [ ! -f "$marker" ]; then
+        echo "==> applying $(basename "$patch_file")"
+        patch -p1 --forward --quiet < "$patch_file"
+        touch "$marker"
+    fi
+done
+
 if [ ! -f ./config.h ]; then
     echo "==> configuring (lib + ntfsprogs; FUSE driver disabled)"
     # --disable-ntfs-3g: never link or build the FUSE driver. MacNTFS calls

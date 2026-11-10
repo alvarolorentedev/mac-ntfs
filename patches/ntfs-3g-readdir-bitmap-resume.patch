@@ -1,0 +1,19 @@
+--- a/libntfs-3g/dir.c
++++ b/libntfs-3g/dir.c
+@@ -1313,7 +1313,15 @@
+ 		goto err_out;
+ 	}
+ 
+-	bmp_buf_pos = 0;
++	/*
++	 * The bitmap buffer starts at byte (bmp_pos >> 3), so the bit for
++	 * bmp_pos is (bmp_pos & 7) within it. Starting at 0 misaligns every
++	 * later bit test by (bmp_pos & 7) blocks when resuming a readdir in an
++	 * index block whose number is not a multiple of 8: free blocks are then
++	 * read as in use (EIO from the inconsistency check) and in-use blocks
++	 * can be skipped.
++	 */
++	bmp_buf_pos = bmp_pos & 7;
+ 	/* If the index block is not in use find the next one that is. */
+ 	while (!(bmp[bmp_buf_pos >> 3] & (1 << (bmp_buf_pos & 7)))) {
+ find_next_index_buffer:
