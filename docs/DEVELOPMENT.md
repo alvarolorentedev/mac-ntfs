@@ -109,7 +109,7 @@ Pushing a version tag builds a Release app, notarizes and staples it, packages
 `Mountee.dmg` (app + Applications shortcut + quick start) and
 `Mountee-<version>.zip` (the stapled app for Sparkle), signs an `appcast.xml`,
 and attaches all three assets to the GitHub release. Mountee checks
-`https://github.com/alvarolorentedev/mac-ntfs/releases/latest/download/appcast.xml`;
+`https://github.com/alvarolorentedev/mountee/releases/latest/download/appcast.xml`;
 the feed points to the versioned ZIP attached to that release. The workflow lives in
 `.github/workflows/release.yml` and runs in a disposable Tart macOS 26.6.2 VM
 with Xcode 27. The runner requires `self-hosted`, `macOS`, `ARM64`, `tart-macos`

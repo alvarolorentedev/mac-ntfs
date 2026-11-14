@@ -60,7 +60,7 @@ free, open-source option that gets read/write without either.
 
 ## Install
 
-1. Download [Mountee.dmg](https://github.com/alvarolorentedev/mac-ntfs/releases/latest/download/Mountee.dmg)
+1. Download [Mountee.dmg](https://github.com/alvarolorentedev/mountee/releases/latest/download/Mountee.dmg)
    and open it.
 2. If upgrading, quit and remove `/Applications/MacNTFS.app` first. Drag
    **Mountee.app** to `/Applications` and launch it.

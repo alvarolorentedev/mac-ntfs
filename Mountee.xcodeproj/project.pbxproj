@@ -393,18 +393,18 @@
 				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Mountee/Info.plist;
 				EXECUTABLE_NAME = mountee;
 				INFOPLIST_KEY_CFBundleDisplayName = Mountee;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_SUEnableAutomaticChecks = YES;
-				INFOPLIST_KEY_SUFeedURL = "https://github.com/alvarolorentedev/mac-ntfs/releases/latest/download/appcast.xml";
+				INFOPLIST_KEY_SUFeedURL = "https://github.com/alvarolorentedev/mountee/releases/latest/download/appcast.xml";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.3.1;
-				INFOPLIST_KEY_SUPublicEDKey = "mWNLCI8wSAF4gkrnk2mPEdFVI8tGyBFBDECpTm9HCD4=";
 				PRODUCT_BUNDLE_IDENTIFIER = app.mountee;
 				PRODUCT_NAME = Mountee;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -422,18 +422,18 @@
 				CURRENT_PROJECT_VERSION = "$(MARKETING_VERSION)";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = Mountee/Info.plist;
 				EXECUTABLE_NAME = mountee;
 				INFOPLIST_KEY_CFBundleDisplayName = Mountee;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_SUEnableAutomaticChecks = YES;
-				INFOPLIST_KEY_SUFeedURL = "https://github.com/alvarolorentedev/mac-ntfs/releases/latest/download/appcast.xml";
+				INFOPLIST_KEY_SUFeedURL = "https://github.com/alvarolorentedev/mountee/releases/latest/download/appcast.xml";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.3.1;
-				INFOPLIST_KEY_SUPublicEDKey = "mWNLCI8wSAF4gkrnk2mPEdFVI8tGyBFBDECpTm9HCD4=";
 				PRODUCT_BUNDLE_IDENTIFIER = app.mountee;
 				PRODUCT_NAME = Mountee;
 				SWIFT_EMIT_LOC_STRINGS = YES;
