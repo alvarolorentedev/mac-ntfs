@@ -78,6 +78,8 @@ The menu bar lists every NTFS volume Disk Arbitration reports.
 - **Mount Read/Write** — explicit opt-in; still refused (mounts read-only) when
   the volume is dirty or hibernated.
 - **Unmount**, **Eject**, **Reveal**, **Details** — per volume.
+- **Open MacNTFS at login** — toggle to start the app automatically; offered
+  once on first launch, defaulting to on.
 - **Copy Diagnostics** — copies a troubleshooting report to the clipboard.
 
 Mounted volumes appear in Finder and `/Volumes` like any other disk. To

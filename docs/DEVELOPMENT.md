@@ -9,6 +9,7 @@ MacNTFS.app (SwiftUI menu bar; non-sandboxed)
  ├─ DiskArbitrationMonitor   discovery and state (dynamic BSD names only)
  ├─ MountService             mount/unmount/eject (validated argv, no shell strings)
  ├─ ModuleEnabler            per-user FSKit enablement (plist + fskit_agent)
+ ├─ LaunchAtLogin            login item via SMAppService (first-launch offer)
  └─ Contents/Extensions/
      └─ NTFSModule.appex     FSKit module (sandboxed, Developer ID signed)
            NTFSFileSystem    probe (NTFS boot sector) + load (safety gate)

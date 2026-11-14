@@ -38,6 +38,29 @@ enum CLI {
             }
         }
 
+        if arguments.contains("--login-item-status") {
+            print(LaunchAtLogin.statusDescription)
+            exit(LaunchAtLogin.isEnabled ? 0 : 1)
+        }
+
+        if arguments.contains("--enable-login-item") {
+            if let error = LaunchAtLogin.setEnabled(true) {
+                fputs("MacNTFS: \(error)\n", stderr)
+                exit(1)
+            }
+            print("MacNTFS: login item enabled")
+            exit(0)
+        }
+
+        if arguments.contains("--disable-login-item") {
+            if let error = LaunchAtLogin.setEnabled(false) {
+                fputs("MacNTFS: \(error)\n", stderr)
+                exit(1)
+            }
+            print("MacNTFS: login item disabled")
+            exit(0)
+        }
+
         if arguments.contains("--list-volumes") {
             guard let monitor = DiskArbitrationMonitor() else {
                 fputs("error: Disk Arbitration unavailable\n", stderr)

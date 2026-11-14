@@ -11,10 +11,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 @main
 struct MacNTFSApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
-    @StateObject private var model = AppModel()
+    @StateObject private var model: AppModel
 
     init() {
         CLI.handle(arguments: CommandLine.arguments)
+        let model = AppModel()
+        _model = StateObject(wrappedValue: model)
+        // Offering to start at login is a launch-time decision, so present it
+        // once the run loop is up rather than from inside `init`.
+        DispatchQueue.main.async { offerLaunchAtLoginIfNeeded(model: model) }
     }
 
     var body: some Scene {
@@ -29,5 +34,27 @@ struct MacNTFSApp: App {
                 .onAppear { model.start() }
         }
         .windowResizability(.contentSize)
+    }
+}
+
+/// On first launch, offer to add MacNTFS to Login Items, defaulting to yes.
+/// Asked at most once; a later change is made with the menu toggle. Skipped
+/// when the login item is already registered.
+private func offerLaunchAtLoginIfNeeded(model: AppModel) {
+    let key = "MacNTFSDidOfferLaunchAtLogin"
+    let defaults = UserDefaults.standard
+    guard !defaults.bool(forKey: key) else { return }
+    defaults.set(true, forKey: key)
+    guard LaunchAtLogin.status == .notRegistered else { return }
+
+    NSApp.activate(ignoringOtherApps: true)
+    let alert = NSAlert()
+    alert.alertStyle = .informational
+    alert.messageText = "Open MacNTFS at login?"
+    alert.informativeText = "MacNTFS can open automatically when you log in, so your NTFS drives are ready without launching the app. You can change this any time from the MacNTFS menu."
+    alert.addButton(withTitle: "Add to Login Items")
+    alert.addButton(withTitle: "Not Now")
+    if alert.runModal() == .alertFirstButtonReturn {
+        model.setLaunchAtLogin(true)
     }
 }

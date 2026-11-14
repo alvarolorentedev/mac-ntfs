@@ -21,6 +21,7 @@
 		0089 /* Diagnostics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0083 /* Diagnostics.swift */; };
 		0090 /* MenuView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0084 /* MenuView.swift */; };
 		0091 /* CLI.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0085 /* CLI.swift */; };
+		0092 /* LaunchAtLogin.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0093 /* LaunchAtLogin.swift */; };
 		0072 /* NTFSDeviceShim.m in Sources */ = {isa = PBXBuildFile; fileRef = 0063 /* NTFSDeviceShim.m */; };
 		0073 /* ntfs_bridge.c in Sources */ = {isa = PBXBuildFile; fileRef = 0066 /* ntfs_bridge.c */; };
 		0058 /* FSKitDaemonEnablement.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0048 /* FSKitDaemonEnablement.swift */; };
@@ -70,6 +71,7 @@
 		0083 /* Diagnostics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Diagnostics.swift; sourceTree = "<group>"; };
 		0084 /* MenuView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MenuView.swift; sourceTree = "<group>"; };
 		0085 /* CLI.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CLI.swift; sourceTree = "<group>"; };
+		0093 /* LaunchAtLogin.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchAtLogin.swift; sourceTree = "<group>"; };
 		0048 /* FSKitDaemonEnablement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FSKitDaemonEnablement.swift; sourceTree = "<group>"; };
 		0062 /* NTFSDeviceShim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NTFSDeviceShim.h; sourceTree = "<group>"; };
 		0063 /* NTFSDeviceShim.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NTFSDeviceShim.m; sourceTree = "<group>"; };
@@ -130,6 +132,7 @@
 				0084 /* MenuView.swift */,
 				0047 /* ModuleEnabler.swift */,
 				0085 /* CLI.swift */,
+				0093 /* LaunchAtLogin.swift */,
 				0048 /* FSKitDaemonEnablement.swift */,
 				0016 /* MacNTFS.entitlements */,
 			);
@@ -268,6 +271,7 @@
 				0089 /* Diagnostics.swift in Sources */,
 				0090 /* MenuView.swift in Sources */,
 				0091 /* CLI.swift in Sources */,
+				0092 /* LaunchAtLogin.swift in Sources */,
 				0058 /* FSKitDaemonEnablement.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

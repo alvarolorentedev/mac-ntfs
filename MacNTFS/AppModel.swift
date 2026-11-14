@@ -6,6 +6,8 @@ final class AppModel: ObservableObject {
     @Published private(set) var extensionState = "Checking…"
     @Published private(set) var lastMessage: String?
     @Published private(set) var busyDevice: String?
+    /// Mirrors the system's login-item state; updated after every change.
+    @Published private(set) var launchAtLogin = LaunchAtLogin.isEnabled
 
     private let monitor: DiskArbitrationMonitor
     private let mountService: MountService
@@ -72,6 +74,20 @@ final class AppModel: ObservableObject {
                     self?.lastMessage = "Extension is not registered; launch the app once from /Applications"
                 }
                 self?.refresh()
+            }
+        }
+    }
+
+    /// Registers or unregisters the app as a login item. The published flag is
+    /// always re-read from the system afterwards, so it can never drift.
+    func setLaunchAtLogin(_ enabled: Bool) {
+        DispatchQueue.global(qos: .utility).async { [weak self] in
+            let error = LaunchAtLogin.setEnabled(enabled)
+            DispatchQueue.main.async {
+                self?.launchAtLogin = LaunchAtLogin.isEnabled
+                if let error {
+                    self?.lastMessage = "Could not update login item: \(error)"
+                }
             }
         }
     }

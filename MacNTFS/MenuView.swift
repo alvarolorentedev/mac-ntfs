@@ -42,6 +42,12 @@ struct MenuView: View {
 
             Divider()
 
+            Toggle("Open MacNTFS at login", isOn: Binding(
+                get: { model.launchAtLogin },
+                set: { model.setLaunchAtLogin($0) }
+            ))
+            .toggleStyle(.checkbox)
+
             HStack {
                 Button("Refresh") { model.refresh() }
                 Button("Copy Diagnostics") {
