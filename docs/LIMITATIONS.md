@@ -1,6 +1,6 @@
 # Known limitations
 
-Current, honest limits of Mountee 0.2.0. None of these are silent: unsupported
+Current, honest limits of Mountee 0.3.0. None of these are silent: unsupported
 operations return `ENOTSUP` rather than a false success.
 
 - **fsync delivery is not independently verified end to end.** Writes use the
