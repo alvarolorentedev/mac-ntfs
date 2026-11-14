@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Builds the distributable installer: a signed, notarized, stapled DMG.
+# Builds the signed, notarized DMG and the app-only ZIP used by Sparkle.
 #
 # Prerequisites:
 #   CONFIG=Release ./scripts/build-signed.sh   (a Developer ID signed app)
@@ -36,6 +36,7 @@ fi
 VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist" 2>/dev/null || echo "0.0.0")"
 mkdir -p "$OUT_DIR"
 DMG="$OUT_DIR/Mountee-$VERSION.dmg"
+UPDATE_ZIP="$OUT_DIR/Mountee-$VERSION.zip"
 
 notarize=0
 case "$NOTARIZE" in
@@ -88,6 +89,10 @@ else
     echo "==> notarization skipped (set ASC_KEY_PATH/ASC_KEY_ID/ASC_ISSUER_ID and NOTARIZE=1 to enable)"
 fi
 
+echo "==> packaging Sparkle update"
+rm -f "$UPDATE_ZIP"
+ditto -c -k --keepParent "$APP" "$UPDATE_ZIP"
+
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 echo "==> staging"
@@ -129,4 +134,6 @@ fi
 echo
 echo "==> installer ready"
 echo "    $DMG"
+echo "    $UPDATE_ZIP"
 shasum -a 256 "$DMG"
+shasum -a 256 "$UPDATE_ZIP"

@@ -1,8 +1,10 @@
 import AppKit
+import Sparkle
 import SwiftUI
 
 struct MenuView: View {
     @ObservedObject var model: AppModel
+    let updaterController: SPUStandardUpdaterController
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -47,6 +49,10 @@ struct MenuView: View {
                 set: { model.setLaunchAtLogin($0) }
             ))
             .toggleStyle(.checkbox)
+
+            Button("Check for Updates…") {
+                updaterController.checkForUpdates(nil)
+            }
 
             HStack {
                 Button("Refresh") { model.refresh() }

@@ -1,4 +1,5 @@
 import AppKit
+import Sparkle
 import SwiftUI
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -12,6 +13,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 struct MounteeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var model: AppModel
+    private let updaterController = SPUStandardUpdaterController(
+        startingUpdater: true,
+        updaterDelegate: nil,
+        userDriverDelegate: nil
+    )
 
     init() {
         Diagnostics.migrateLegacyReports()
@@ -25,13 +31,13 @@ struct MounteeApp: App {
 
     var body: some Scene {
         MenuBarExtra("Mountee", systemImage: "externaldrive") {
-            MenuView(model: model)
+            MenuView(model: model, updaterController: updaterController)
                 .onAppear { model.start() }
         }
         .menuBarExtraStyle(.window)
 
         Window("Mountee", id: "main") {
-            MenuView(model: model)
+            MenuView(model: model, updaterController: updaterController)
                 .onAppear { model.start() }
         }
         .windowResizability(.contentSize)

@@ -46,6 +46,16 @@ jobs:
             fi
           done
 
+      - name: Validate Sparkle signing key
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          if [ -z "$SPARKLE_ED_PRIVATE_KEY" ]; then
+            echo "error: required release credential SPARKLE_ED_PRIVATE_KEY is missing" >&2
+            exit 1
+          fi
+
       - name: Import Developer ID certificate
         run: |
           set -euo pipefail
@@ -105,20 +115,61 @@ jobs:
           TAG="${GITHUB_REF_NAME#v}"
           VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
             build/DerivedData/Build/Products/Release/Mountee.app/Contents/Info.plist)"
+          BUILD_VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleVersion' \
+            build/DerivedData/Build/Products/Release/Mountee.app/Contents/Info.plist)"
+          PUBLIC_KEY="$(/usr/libexec/PlistBuddy -c 'Print :SUPublicEDKey' \
+            build/DerivedData/Build/Products/Release/Mountee.app/Contents/Info.plist)"
           if [ "$TAG" != "$VERSION" ]; then
             echo "error: tag v$TAG does not match app version $VERSION" >&2
+            exit 1
+          fi
+          if [ "$BUILD_VERSION" != "$VERSION" ]; then
+            echo "error: app build version $BUILD_VERSION does not match app version $VERSION" >&2
+            exit 1
+          fi
+          if [ -z "$PUBLIC_KEY" ]; then
+            echo "error: Sparkle public key is missing from the app Info.plist" >&2
             exit 1
           fi
 
       - name: Build notarized installer
         run: ./scripts/make-installer.sh
 
+      - name: Generate signed Sparkle appcast
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          UPDATES_DIR="$RUNNER_TEMP/sparkle-updates"
+          mkdir -p "$UPDATES_DIR"
+          cp build/installer/Mountee-*.zip "$UPDATES_DIR/"
+
+          GENERATE_APPCAST="$(find build/DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin \
+            -maxdepth 1 -name generate_appcast -print -quit)"
+          if [ ! -x "$GENERATE_APPCAST" ]; then
+            echo "error: Sparkle generate_appcast tool was not found" >&2
+            exit 1
+          fi
+          printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | "$GENERATE_APPCAST" \
+            --ed-key-file - \
+            --download-url-prefix "https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/" \
+            "$UPDATES_DIR"
+          cp "$UPDATES_DIR/appcast.xml" build/installer/appcast.xml
+          test -s build/installer/appcast.xml
+          if ! grep -Eq 'sparkle:edSignature="[^"]+"' build/installer/appcast.xml; then
+            echo "error: generated Sparkle appcast has no EdDSA signature" >&2
+            exit 1
+          fi
+
       - name: Preserve installer for manual validation
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
           name: Mountee-installer
-          path: build/installer/*.dmg
+          path: |
+            build/installer/*.dmg
+            build/installer/*.zip
           if-no-files-found: error
           retention-days: 7
 
@@ -126,7 +177,10 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
-          files: build/installer/*.dmg
+          files: |
+            build/installer/*.dmg
+            build/installer/*.zip
+            build/installer/appcast.xml
           generate_release_notes: true
 
       - name: Restore keychain list

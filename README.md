@@ -67,6 +67,9 @@ free, open-source option that gets read/write without either.
 3. Press **Enable File System Extension** in the menu bar window. Add
    Mountee to Login Items again when prompted.
 
+Mountee checks GitHub Releases for updates in the background and asks before
+installing. Choose **Check for Updates…** in the menu to check immediately.
+
 This release changes the app and FSKit identifiers. Existing diagnostic reports are copied from
 `~/Library/Application Support/MacNTFS` into the new support folder without
 removing the originals. Existing or active mountpoints are left in place; new

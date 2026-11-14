@@ -106,8 +106,11 @@ mountpoints are not moved; fallback mounts use `~/Library/Mountee/Volumes`.
 ## Installer (CI)
 
 Pushing a version tag builds a Release app, notarizes and staples it, packages
-`Mountee-<version>.dmg` (app + Applications shortcut + quick start) and attaches
-it to the GitHub release. The workflow lives in
+`Mountee-<version>.dmg` (app + Applications shortcut + quick start) and
+`Mountee-<version>.zip` (the stapled app for Sparkle), signs an `appcast.xml`,
+and attaches all three assets to the GitHub release. Mountee checks
+`https://github.com/alvarolorentedev/mac-ntfs/releases/latest/download/appcast.xml`;
+the feed points to the versioned ZIP attached to that release. The workflow lives in
 `.github/workflows/release.yml` and runs in a disposable Tart macOS 26.6.2 VM
 with Xcode 27. The runner requires `self-hosted`, `macOS`, `ARM64`, `tart-macos`
 and `tart-run-${{ github.run_id }}-${{ github.run_attempt }}` labels. A shared
@@ -115,10 +118,29 @@ host controller polls this repository and CloudLink every two minutes and runs
 one VM at a time. Each VM handles one job and is destroyed afterward.
 
 Every run imports the required certificate secrets into a temporary keychain.
-The app version (`MARKETING_VERSION`) must match a release tag. Manual dispatch
-uploads a seven-day `Mountee-installer` artifact without publishing a release.
+The app version (`MARKETING_VERSION` and `CURRENT_PROJECT_VERSION`) must match a
+release tag so Sparkle can compare installed and available builds. Manual
+dispatch uploads a seven-day `Mountee-installer` artifact without publishing a
+release. Existing app versions without Sparkle need one manual install of an
+updater-enabled DMG before in-app updates work.
 Mount integration tests run separately through `scripts/validate-all.sh` because
 FSKit enablement is per-user machine state.
+
+### Sparkle signing key
+
+The app's public EdDSA key is in the Mountee target's generated Info.plist build
+settings. Keep its matching private key outside the repository. On the
+maintainer machine it is stored at
+`~/.secrets/mountee-sparkle-ed-private-key`; add it to GitHub Actions once:
+
+```sh
+gh secret set SPARKLE_ED_PRIVATE_KEY < ~/.secrets/mountee-sparkle-ed-private-key
+```
+
+The release workflow passes the secret to Sparkle's `generate_appcast` over
+standard input, so it is not written to the runner's filesystem. Do not rotate
+the key unless the app's `SUPublicEDKey` build setting is changed in the same
+release.
 
 Required repository secrets:
 
@@ -129,6 +151,7 @@ Required repository secrets:
 | `ASC_KEY_P8` | base64 of the `AuthKey_*.p8` file |
 | `DEVELOPER_ID_P12` | base64 of the exported "Developer ID Application" certificate + private key (.p12) |
 | `DEVELOPER_ID_P12_PASSWORD` | the password chosen while exporting the .p12 |
+| `SPARKLE_ED_PRIVATE_KEY` | base64 private EdDSA key used to sign Sparkle update feeds |
 
 Export the certificate once: Keychain Access → My Certificates → "Developer ID
 Application: …" → Export…, save as .p12 with a password, then

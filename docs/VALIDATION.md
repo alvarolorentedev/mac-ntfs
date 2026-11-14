@@ -13,13 +13,17 @@ Run in order; each step must pass before the next.
 ./scripts/run-engine-tests.sh       # [ ] "ENGINE TESTS: PASSED" (179 checks)
 ./scripts/create-dev-id-profiles.sh # [ ] both .provisionprofile written
 ./scripts/build-signed.sh           # [ ] BUILD SUCCEEDED, "entitlements OK"
-./scripts/make-installer.sh         # [ ] DMG notarized ("Accepted"), stapled, spctl accepted
+./scripts/make-installer.sh         # [ ] DMG notarized/stapled; app-only Sparkle ZIP created
 ./scripts/m1-mount-test.sh          # [ ] "M1 GATE: PASSED"
 ./scripts/m3-mount-test.sh          # [ ] "M3 GATE: PASSED"
 ./scripts/m4-mount-test.sh          # [ ] "M4 GATE: PASSED"
 ```
 
 `./scripts/validate-all.sh` runs the engine, M3 and M4 gates in one go.
+
+After an updater-enabled version is installed, verify the next release through
+**Check for Updates…**: accept the signed update, confirm the app relaunches,
+and confirm the FSKit extension remains enabled.
 
 Between rebuilds, kill stale extension processes:
 `pkill -9 -f MounteeFSKit.appex`

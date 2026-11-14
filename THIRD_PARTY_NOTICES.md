@@ -30,6 +30,13 @@ licenses compatible with this project's GPL-3.0 license.
 Because every linked file is licensed "GPL-2.0 or later", the combined work may
 be distributed under this project's GPL-3.0 license.
 
+## Sparkle — MIT
+
+- Upstream: https://github.com/sparkle-project/Sparkle
+- Version: **2.10.1** (Swift Package Manager; pinned in `Package.resolved`)
+- What is used: Sparkle's macOS update framework in the Mountee app target.
+- License: MIT; see the `LICENSE` file in the Sparkle distribution.
+
 ## Apple frameworks
 
 The app and the file system extension link Apple system frameworks (FSKit,
