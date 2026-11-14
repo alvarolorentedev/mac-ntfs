@@ -1,6 +1,6 @@
 # Third-party notices
 
-MacNTFS links the following third-party software. All of it is used under
+Mountee links the following third-party software. All of it is used under
 licenses compatible with this project's GPL-3.0 license.
 
 ## ntfs-3g (libntfs-3g) — GPL-2.0-or-later
@@ -18,7 +18,7 @@ licenses compatible with this project's GPL-3.0 license.
 - What is used: `libntfs-3g.a`, a static library built by
   `scripts/build-libntfs.sh`. The FUSE driver, mount helper and mtab support
   are disabled at configure time (`--disable-ntfs-3g`, `--disable-mount-helper`,
-  `--disable-mtab`), so no FUSE code is compiled or linked: MacNTFS calls
+  `--disable-mtab`), so no FUSE code is compiled or linked: Mountee calls
   libntfs-3g directly from the FSKit extension through `bridge/ntfs_bridge.c`.
 - Modifications: the build applies the patches in `patches/` to the release
   source before compiling. `ntfs-3g-readdir-bitmap-resume.patch` fixes the
@@ -38,4 +38,4 @@ sample code is copied into this repository.
 
 ## This project
 
-MacNTFS is licensed under GPL-3.0; see `LICENSE`.
+Mountee is licensed under GPL-3.0; see `LICENSE`.

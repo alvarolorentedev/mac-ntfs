@@ -1,17 +1,17 @@
 # Development and build
 
-Everything needed to build, sign, package and validate MacNTFS from source.
+Everything needed to build, sign, package and validate Mountee from source.
 
 ## Architecture
 
 ```
-MacNTFS.app (SwiftUI menu bar; non-sandboxed)
+Mountee (SwiftUI menu bar; non-sandboxed)
  ├─ DiskArbitrationMonitor   discovery and state (dynamic BSD names only)
  ├─ MountService             mount/unmount/eject (validated argv, no shell strings)
  ├─ ModuleEnabler            per-user FSKit enablement (plist + fskit_agent)
  ├─ LaunchAtLogin            login item via SMAppService (first-launch offer)
  └─ Contents/Extensions/
-     └─ NTFSModule.appex     FSKit module (sandboxed, Developer ID signed)
+     └─ MounteeFSKit.appex     FSKit module (sandboxed, Developer ID signed)
            NTFSFileSystem    probe (NTFS boot sector) + load (safety gate)
            NTFSVolumeBase    shared volume core: bridge, cache, enumeration
            NTFSVolumeV3      macOS 27+ adapter (async FSVolume.Handler)
@@ -40,12 +40,12 @@ FSKit module (see `docs/VALIDATION.md`).
 ## Layout
 
 ```
-MacNTFS/                 menu bar app sources
-NTFSModule/              FSKit extension sources (Swift + ObjC shim)
+Mountee/                 menu bar app sources
+MounteeFSKit/            FSKit extension sources (Swift + ObjC shim)
 bridge/                  narrow C bridge to libntfs-3g
 tests/engine/            bridge test suite (no FSKit)
 scripts/                 build, signing, validation and diagnostics scripts
-MacNTFS.xcodeproj        both targets; manual Developer ID signing
+Mountee.xcodeproj        Mountee and MounteeFSKit targets; manual Developer ID signing
 docs/                    this guide, validation checklist and diagnostics guide
 ```
 
@@ -87,16 +87,26 @@ export ASC_ISSUER_ID=00000000-0000-0000-0000-000000000000
 ./scripts/build-signed.sh                       # installs them and builds
 ```
 
-`create-dev-id-profiles.sh` creates Developer ID profiles containing all valid
-Developer ID certificates of the team (no device registration, so the same
-profiles work on any machine). `build-signed.sh` installs them into the Xcode
-profile lookup, builds, and verifies both entitlements afterwards. For an
-unsigned compilation check on hosted CI runners, use `COMPILE_ONLY=1`.
+Register the App IDs `app.mountee` and `app.mountee.fskit` with the app's FSKit
+mount and module capabilities before generating profiles. Existing profiles
+for the old identifiers do not work with these IDs. `create-dev-id-profiles.sh`
+creates Developer ID profiles containing the team's existing Developer ID
+certificate; it does not create a certificate, CSR, or private key. Keep the
+current `~/.secrets/mac-ntfs` key, P12, and App Store Connect key paths intact.
+`build-signed.sh` installs the new profiles into Xcode, builds, and verifies
+both entitlements. For unsigned CI compilation checks use `COMPILE_ONLY=1`.
+
+The app bundle is `Mountee.app`, the app ID is `app.mountee`, and the extension
+ID is `app.mountee.fskit`. Since these are new identifiers, upgrading users
+must remove `/Applications/MacNTFS.app`, enable Mountee's extension, and add
+Mountee to Login Items again. The app copies existing diagnostic reports to
+the new support folder without deleting the originals. Existing and active
+mountpoints are not moved; fallback mounts use `~/Library/Mountee/Volumes`.
 
 ## Installer (CI)
 
 Pushing a version tag builds a Release app, notarizes and staples it, packages
-`MacNTFS-<version>.dmg` (app + Applications shortcut + quick start) and attaches
+`Mountee-<version>.dmg` (app + Applications shortcut + quick start) and attaches
 it to the GitHub release. The workflow lives in
 `.github/workflows/release.yml` and runs in a disposable Tart macOS 26.6.2 VM
 with Xcode 27. The runner requires `self-hosted`, `macOS`, `ARM64`, `tart-macos`
@@ -106,7 +116,7 @@ one VM at a time. Each VM handles one job and is destroyed afterward.
 
 Every run imports the required certificate secrets into a temporary keychain.
 The app version (`MARKETING_VERSION`) must match a release tag. Manual dispatch
-uploads a seven-day `macntfs-tart-installer` artifact without publishing a release.
+uploads a seven-day `Mountee-installer` artifact without publishing a release.
 Mount integration tests run separately through `scripts/validate-all.sh` because
 FSKit enablement is per-user machine state.
 
@@ -142,7 +152,10 @@ touches physical drives.
 
 ```sh
 ./scripts/check-min-os.sh       # Mach-O floor guard: everything stamped <= 26.0
+./scripts/test-diagnostics-migration.sh # preserves source reports and mountpoints
+./scripts/test-module-enabler-migration.sh # preserves unrelated FSKit IDs
 ./scripts/run-engine-tests.sh   # bridge suite, no FSKit needed
+./scripts/test-module-enabler-migration.sh # old module ID replacement check
 ./scripts/m3-mount-test.sh      # mounted read/write + safety downgrades
 ./scripts/m4-mount-test.sh      # app mount/unmount/eject code paths
 ./scripts/validate-all.sh       # everything above in order

@@ -1,9 +1,9 @@
-# MacNTFS
+# Mountee
 
-**NTFS read/write on macOS — no kernel extension, no macFUSE, no security
-compromises.**
+**[mountee.app](https://mountee.app) — NTFS read/write on macOS, without a kernel
+extension, macFUSE, or security compromises.**
 
-MacNTFS is a free, open-source (GPL-3.0) NTFS driver and menu bar app for Apple
+Mountee is a free, open-source (GPL-3.0) NTFS driver and menu bar app for Apple
 Silicon Macs. It builds on Apple's FSKit framework and the upstream ntfs-3g
 engine, so it mounts NTFS drives with full read/write access from user space:
 nothing to approve in Recovery Mode, nothing to downgrade, nothing left behind
@@ -12,7 +12,7 @@ after you remove it.
 Status: **0.2.0** — read/write verified on **macOS 27.0.1** and **macOS 26.6.2**
 (Apple Silicon).
 
-## Why MacNTFS
+## Why Mountee
 
 - **No kernel extension.** Built on Apple's FSKit framework, so there is no
   kext to approve, no Reduced Security, no SIP changes and no reboot. Your Mac
@@ -21,7 +21,7 @@ Status: **0.2.0** — read/write verified on **macOS 27.0.1** and **macOS 26.6.2
   nothing else to install and no Homebrew at runtime.
 - **Safe by default.** Volumes mount read-only; read/write is an explicit
   per-volume action. Dirty or Windows-hibernated volumes (Fast Startup) are
-  never mounted read/write. MacNTFS never formats, repairs or erases anything.
+  never mounted read/write. Mountee never formats, repairs or erases anything.
 - **Honest about failure.** Unsupported operations return `ENOTSUP` and
   metadata files can never be deleted — nothing reports a false success.
 - **Free and open source.** GPL-3.0, auditable, with a pinned and SHA-256
@@ -32,7 +32,7 @@ Status: **0.2.0** — read/write verified on **macOS 27.0.1** and **macOS 26.6.2
 
 ## How it compares
 
-| | **MacNTFS** | macOS built-in | macFUSE + ntfs-3g | Paragon / Tuxera |
+| | **Mountee** | macOS built-in | macFUSE + ntfs-3g | Paragon / Tuxera |
 |---|---|---|---|---|
 | NTFS read | Yes | Yes | Yes | Yes |
 | NTFS write | Yes | No | Yes | Yes |
@@ -50,7 +50,7 @@ and restarting.
 
 The built-in macOS driver is read-only. Commercial drivers work well, but they
 are paid, closed source, and historically depend on kernel extensions that
-break with macOS updates and require lowering your Mac's security. MacNTFS is a
+break with macOS updates and require lowering your Mac's security. Mountee is a
 free, open-source option that gets read/write without either.
 
 ## Requirements
@@ -60,11 +60,17 @@ free, open-source option that gets read/write without either.
 
 ## Install
 
-1. Download `MacNTFS-<version>.dmg` from the
+1. Download `Mountee-<version>.dmg` from the
    [GitHub releases](../../releases) and open it.
-2. Drag **MacNTFS.app** to `/Applications`, then launch it once — this
-   registers the file system extension.
-3. Press **Enable File System Extension** in the menu bar window.
+2. If upgrading, quit and remove `/Applications/MacNTFS.app` first. Drag
+   **Mountee.app** to `/Applications` and launch it.
+3. Press **Enable File System Extension** in the menu bar window. Add
+   Mountee to Login Items again when prompted.
+
+This release changes the app and FSKit identifiers. Existing diagnostic reports are copied from
+`~/Library/Application Support/MacNTFS` into the new support folder without
+removing the originals. Existing or active mountpoints are left in place; new
+fallback mounts use `~/Library/Mountee/Volumes`.
 
 That's it. No reboot, no Recovery Mode, no security settings to change. This is
 per-user: enable the extension once in each macOS account that should mount
@@ -78,14 +84,15 @@ The menu bar lists every NTFS volume Disk Arbitration reports.
 - **Mount Read/Write** — explicit opt-in; still refused (mounts read-only) when
   the volume is dirty or hibernated.
 - **Unmount**, **Eject**, **Reveal**, **Details** — per volume.
-- **Open MacNTFS at login** — toggle to start the app automatically; offered
+- **Open Mountee at login** — toggle to start the app automatically; offered
   once on first launch, defaulting to on.
 - **Copy Diagnostics** — copies a troubleshooting report to the clipboard.
 
 Mounted volumes appear in Finder and `/Volumes` like any other disk. To
 uninstall: eject all volumes, disable the extension in System Settings →
 General → Login Items & Extensions → File System Extensions, then delete
-`/Applications/MacNTFS.app` and `~/Library/MacNTFS`.
+`/Applications/Mountee.app` and its support data under
+`~/Library/Application Support/Mountee` and `~/Library/Mountee`.
 
 ## Safety model
 
@@ -98,7 +105,7 @@ General → Login Items & Extensions → File System Extensions, then delete
 
 ## Maturity and limitations
 
-MacNTFS is young (0.2.0). The write path is verified with content hashes across
+Mountee is young (0.2.0). The write path is verified with content hashes across
 remounts on disposable images, but treat read/write on valuable disks like any
 new driver: keep backups and try it on non-critical data first. The safety
 gates above are the main protection against the classic NTFS corruption cases.
@@ -118,5 +125,5 @@ The full list lives in [docs/LIMITATIONS.md](docs/LIMITATIONS.md).
 
 ## License
 
-MacNTFS is GPL-3.0 (`LICENSE`). It statically links ntfs-3g (GPL-2.0-or-later);
+Mountee is GPL-3.0 (`LICENSE`). It statically links ntfs-3g (GPL-2.0-or-later);
 see `THIRD_PARTY_NOTICES.md` for versions, hashes and attribution.

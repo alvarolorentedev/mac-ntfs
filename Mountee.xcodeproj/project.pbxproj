@@ -8,12 +8,12 @@
 
 /* Begin PBXBuildFile section */
 		0059 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 0041 /* Assets.xcassets */; };
-		0050 /* MacNTFSApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0040 /* MacNTFSApp.swift */; };
-		0052 /* NTFSModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0042 /* NTFSModule.swift */; };
+		0050 /* MounteeApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0040 /* MounteeApp.swift */; };
+		0052 /* MounteeFSKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0042 /* MounteeFSKit.swift */; };
 		0053 /* NTFSFileSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0043 /* NTFSFileSystem.swift */; };
 		0054 /* NTFSVolume.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0044 /* NTFSVolume.swift */; };
 		0055 /* NTFSItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0045 /* NTFSItem.swift */; };
-		0056 /* NTFSModule.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0021 /* NTFSModule.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		0056 /* MounteeFSKit.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 0021 /* MounteeFSKit.appex */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		0057 /* ModuleEnabler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0047 /* ModuleEnabler.swift */; };
 		0086 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0080 /* AppModel.swift */; };
 		0087 /* DiskArbitrationMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0081 /* DiskArbitrationMonitor.swift */; };
@@ -34,7 +34,7 @@
 			containerPortal = 0002 /* Project object */;
 			proxyType = 1;
 			remoteGlobalIDString = 0020;
-			remoteInfo = NTFSModule;
+			remoteInfo = MounteeFSKit;
 		};
 /* End PBXContainerItemProxy section */
 
@@ -45,7 +45,7 @@
 			dstPath = "$(EXTENSIONS_FOLDER_PATH)";
 			dstSubfolderSpec = 16;
 			files = (
-				0056 /* NTFSModule.appex in Embed ExtensionKit Extensions */,
+				0056 /* MounteeFSKit.appex in Embed ExtensionKit Extensions */,
 			);
 			name = "Embed ExtensionKit Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -53,13 +53,13 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
-		0011 /* MacNTFS.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MacNTFS.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		0016 /* MacNTFS.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MacNTFS.entitlements; sourceTree = "<group>"; };
-		0021 /* NTFSModule.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = NTFSModule.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		0025 /* NTFSModule.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = NTFSModule.entitlements; sourceTree = "<group>"; };
-		0040 /* MacNTFSApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacNTFSApp.swift; sourceTree = "<group>"; };
+		0011 /* Mountee.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Mountee.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		0016 /* Mountee.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Mountee.entitlements; sourceTree = "<group>"; };
+		0021 /* MounteeFSKit.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.extensionkit-extension"; includeInIndex = 0; path = MounteeFSKit.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		0025 /* MounteeFSKit.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MounteeFSKit.entitlements; sourceTree = "<group>"; };
+		0040 /* MounteeApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MounteeApp.swift; sourceTree = "<group>"; };
 		0041 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		0042 /* NTFSModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NTFSModule.swift; sourceTree = "<group>"; };
+		0042 /* MounteeFSKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MounteeFSKit.swift; sourceTree = "<group>"; };
 		0043 /* NTFSFileSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NTFSFileSystem.swift; sourceTree = "<group>"; };
 		0044 /* NTFSVolume.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NTFSVolume.swift; sourceTree = "<group>"; };
 		0045 /* NTFSItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NTFSItem.swift; sourceTree = "<group>"; };
@@ -75,7 +75,7 @@
 		0048 /* FSKitDaemonEnablement.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FSKitDaemonEnablement.swift; sourceTree = "<group>"; };
 		0062 /* NTFSDeviceShim.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = NTFSDeviceShim.h; sourceTree = "<group>"; };
 		0063 /* NTFSDeviceShim.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = NTFSDeviceShim.m; sourceTree = "<group>"; };
-		0064 /* NTFSModule-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "NTFSModule-Bridging-Header.h"; sourceTree = "<group>"; };
+		0064 /* MounteeFSKit-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = "MounteeFSKit-Bridging-Header.h"; sourceTree = "<group>"; };
 		0065 /* ntfs_bridge.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ntfs_bridge.h; sourceTree = "<group>"; };
 		0066 /* ntfs_bridge.c */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c; path = ntfs_bridge.c; sourceTree = "<group>"; };
 		0070 /* FSKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FSKit.framework; path = System/Library/Frameworks/FSKit.framework; sourceTree = SDKROOT; };
@@ -103,8 +103,8 @@
 		0003 = {
 			isa = PBXGroup;
 			children = (
-				0005 /* MacNTFS */,
-				0006 /* NTFSModule */,
+				0005 /* Mountee */,
+				0006 /* MounteeFSKit */,
 				0067 /* bridge */,
 				0007 /* Frameworks */,
 				0004 /* Products */,
@@ -114,16 +114,16 @@
 		0004 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				0011 /* MacNTFS.app */,
-				0021 /* NTFSModule.appex */,
+				0011 /* Mountee.app */,
+				0021 /* MounteeFSKit.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		0005 /* MacNTFS */ = {
+		0005 /* Mountee */ = {
 			isa = PBXGroup;
 			children = (
-				0040 /* MacNTFSApp.swift */,
+				0040 /* MounteeApp.swift */,
 				0041 /* Assets.xcassets */,
 				0080 /* AppModel.swift */,
 				0081 /* DiskArbitrationMonitor.swift */,
@@ -134,25 +134,25 @@
 				0085 /* CLI.swift */,
 				0093 /* LaunchAtLogin.swift */,
 				0048 /* FSKitDaemonEnablement.swift */,
-				0016 /* MacNTFS.entitlements */,
+				0016 /* Mountee.entitlements */,
 			);
-			path = MacNTFS;
+			path = Mountee;
 			sourceTree = "<group>";
 		};
-		0006 /* NTFSModule */ = {
+		0006 /* MounteeFSKit */ = {
 			isa = PBXGroup;
 			children = (
-				0042 /* NTFSModule.swift */,
+				0042 /* MounteeFSKit.swift */,
 				0043 /* NTFSFileSystem.swift */,
 				0044 /* NTFSVolume.swift */,
 				0045 /* NTFSItem.swift */,
 				0062 /* NTFSDeviceShim.h */,
 				0063 /* NTFSDeviceShim.m */,
-				0064 /* NTFSModule-Bridging-Header.h */,
+				0064 /* MounteeFSKit-Bridging-Header.h */,
 				0046 /* Info.plist */,
-				0025 /* NTFSModule.entitlements */,
+				0025 /* MounteeFSKit.entitlements */,
 			);
-			path = NTFSModule;
+			path = MounteeFSKit;
 			sourceTree = "<group>";
 		};
 		0067 /* bridge */ = {
@@ -175,9 +175,9 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		0010 /* MacNTFS */ = {
+		0010 /* Mountee */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0037 /* Build configuration list for PBXNativeTarget "MacNTFS" */;
+			buildConfigurationList = 0037 /* Build configuration list for PBXNativeTarget "Mountee" */;
 			buildPhases = (
 				0012 /* Sources */,
 				0013 /* Frameworks */,
@@ -189,14 +189,14 @@
 			dependencies = (
 				0060 /* PBXTargetDependency */,
 			);
-			name = MacNTFS;
-			productName = MacNTFS;
-			productReference = 0011 /* MacNTFS.app */;
+			name = Mountee;
+			productName = Mountee;
+			productReference = 0011 /* Mountee.app */;
 			productType = "com.apple.product-type.application";
 		};
-		0020 /* NTFSModule */ = {
+		0020 /* MounteeFSKit */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = 0038 /* Build configuration list for PBXNativeTarget "NTFSModule" */;
+			buildConfigurationList = 0038 /* Build configuration list for PBXNativeTarget "MounteeFSKit" */;
 			buildPhases = (
 				0022 /* Sources */,
 				0023 /* Frameworks */,
@@ -205,9 +205,9 @@
 			);
 			dependencies = (
 			);
-			name = NTFSModule;
-			productName = NTFSModule;
-			productReference = 0021 /* NTFSModule.appex */;
+			name = MounteeFSKit;
+			productName = MounteeFSKit;
+			productReference = 0021 /* MounteeFSKit.appex */;
 			productType = "com.apple.product-type.extensionkit-extension";
 		};
 /* End PBXNativeTarget section */
@@ -228,7 +228,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 0036 /* Build configuration list for PBXProject "MacNTFS" */;
+			buildConfigurationList = 0036 /* Build configuration list for PBXProject "Mountee" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -241,8 +241,8 @@
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				0010 /* MacNTFS */,
-				0020 /* NTFSModule */,
+				0010 /* Mountee */,
+				0020 /* MounteeFSKit */,
 			);
 		};
 /* End PBXProject section */
@@ -263,7 +263,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0050 /* MacNTFSApp.swift in Sources */,
+				0050 /* MounteeApp.swift in Sources */,
 				0057 /* ModuleEnabler.swift in Sources */,
 				0086 /* AppModel.swift in Sources */,
 				0087 /* DiskArbitrationMonitor.swift in Sources */,
@@ -280,7 +280,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				0052 /* NTFSModule.swift in Sources */,
+				0052 /* MounteeFSKit.swift in Sources */,
 				0053 /* NTFSFileSystem.swift in Sources */,
 				0054 /* NTFSVolume.swift in Sources */,
 				0055 /* NTFSItem.swift in Sources */,
@@ -294,7 +294,7 @@
 /* Begin PBXTargetDependency section */
 		0060 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
-			target = 0020 /* NTFSModule */;
+			target = 0020 /* MounteeFSKit */;
 			targetProxy = 0061 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
@@ -361,12 +361,13 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = MacNTFS/MacNTFS.entitlements;
-				PROVISIONING_PROFILE_SPECIFIER = "MacNTFS App Developer ID";
+				CODE_SIGN_ENTITLEMENTS = Mountee/Mountee.entitlements;
+				PROVISIONING_PROFILE_SPECIFIER = "Mountee App Developer ID";
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = MacNTFS;
+				EXECUTABLE_NAME = mountee;
+				INFOPLIST_KEY_CFBundleDisplayName = Mountee;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -374,8 +375,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.github.alvarolorentedev.macntfs;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = app.mountee;
+				PRODUCT_NAME = Mountee;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 			};
 			name = Debug;
@@ -384,14 +385,15 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGN_ENTITLEMENTS = MacNTFS/MacNTFS.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Mountee/Mountee.entitlements;
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				OTHER_CODE_SIGN_FLAGS = "--timestamp";
-				PROVISIONING_PROFILE_SPECIFIER = "MacNTFS App Developer ID";
+				PROVISIONING_PROFILE_SPECIFIER = "Mountee App Developer ID";
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = MacNTFS;
+				EXECUTABLE_NAME = mountee;
+				INFOPLIST_KEY_CFBundleDisplayName = Mountee;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
 				INFOPLIST_KEY_LSUIElement = YES;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -399,8 +401,8 @@
 					"@executable_path/../Frameworks",
 				);
 				MARKETING_VERSION = 0.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.github.alvarolorentedev.macntfs;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				PRODUCT_BUNDLE_IDENTIFIER = app.mountee;
+				PRODUCT_NAME = Mountee;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 			};
 			name = Release;
@@ -408,8 +410,8 @@
 		0034 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = NTFSModule/NTFSModule.entitlements;
-				PROVISIONING_PROFILE_SPECIFIER = "MacNTFS Extension Developer ID";
+				CODE_SIGN_ENTITLEMENTS = MounteeFSKit/MounteeFSKit.entitlements;
+				PROVISIONING_PROFILE_SPECIFIER = "Mountee FSKit Developer ID";
 				CURRENT_PROJECT_VERSION = 1;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"HAVE_CONFIG_H=1",
@@ -428,17 +430,17 @@
 					CoreFoundation,
 					"$(inherited)",
 				);
-				SWIFT_OBJC_BRIDGING_HEADER = "NTFSModule/NTFSModule-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "MounteeFSKit/MounteeFSKit-Bridging-Header.h";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = NTFSModule/Info.plist;
+				INFOPLIST_FILE = MounteeFSKit/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
 				MARKETING_VERSION = 0.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.github.alvarolorentedev.macntfs.ntfsmodule;
+				PRODUCT_BUNDLE_IDENTIFIER = app.mountee.fskit;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -448,10 +450,10 @@
 		0035 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = NTFSModule/NTFSModule.entitlements;
+				CODE_SIGN_ENTITLEMENTS = MounteeFSKit/MounteeFSKit.entitlements;
 				CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO;
 				OTHER_CODE_SIGN_FLAGS = "--timestamp";
-				PROVISIONING_PROFILE_SPECIFIER = "MacNTFS Extension Developer ID";
+				PROVISIONING_PROFILE_SPECIFIER = "Mountee FSKit Developer ID";
 				CURRENT_PROJECT_VERSION = 1;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"HAVE_CONFIG_H=1",
@@ -470,17 +472,17 @@
 					CoreFoundation,
 					"$(inherited)",
 				);
-				SWIFT_OBJC_BRIDGING_HEADER = "NTFSModule/NTFSModule-Bridging-Header.h";
+				SWIFT_OBJC_BRIDGING_HEADER = "MounteeFSKit/MounteeFSKit-Bridging-Header.h";
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = NO;
-				INFOPLIST_FILE = NTFSModule/Info.plist;
+				INFOPLIST_FILE = MounteeFSKit/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
 				MARKETING_VERSION = 0.2.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.github.alvarolorentedev.macntfs.ntfsmodule;
+				PRODUCT_BUNDLE_IDENTIFIER = app.mountee.fskit;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -490,7 +492,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		0036 /* Build configuration list for PBXProject "MacNTFS" */ = {
+		0036 /* Build configuration list for PBXProject "Mountee" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0030 /* Debug */,
@@ -499,7 +501,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		0037 /* Build configuration list for PBXNativeTarget "MacNTFS" */ = {
+		0037 /* Build configuration list for PBXNativeTarget "Mountee" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0032 /* Debug */,
@@ -508,7 +510,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		0038 /* Build configuration list for PBXNativeTarget "NTFSModule" */ = {
+		0038 /* Build configuration list for PBXNativeTarget "MounteeFSKit" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				0034 /* Debug */,

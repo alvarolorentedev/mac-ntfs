@@ -10,7 +10,7 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 OUT="$REPO_ROOT/build/diagnostics/$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT"
 
-MODULE_ID="com.github.alvarolorentedev.macntfs.ntfsmodule"
+MODULE_ID="app.mountee.fskit"
 ENABLED_PLIST="$HOME/Library/Group Containers/group.com.apple.fskit.settings/enabledModules.plist"
 
 section() { printf '\n===== %s =====\n' "$1"; }
@@ -28,8 +28,8 @@ section() { printf '\n===== %s =====\n' "$1"; }
     section "registered FSKit modules (all)"
     pluginkit -m -p com.apple.fskit.fsmodule -vv 2>&1
 
-    section "registered FSKit modules (macntfs only)"
-    pluginkit -m -p com.apple.fskit.fsmodule -vv 2>&1 | grep -B1 -A8 -i macntfs || echo "(not registered)"
+    section "registered Mountee FSKit modules"
+    pluginkit -m -p com.apple.fskit.fsmodule -vv 2>&1 | grep -B1 -A8 -i mountee || echo "(not registered)"
 
     section "system extensions"
     systemextensionsctl list 2>&1
@@ -52,7 +52,7 @@ section() { printf '\n===== %s =====\n' "$1"; }
 } > "$OUT/state.txt" 2>&1
 
 log show --last 15m --style compact --info \
-    --predicate 'subsystem == "com.apple.FSKit" OR process == "fskitd" OR process CONTAINS "NTFSModule"' \
+    --predicate 'subsystem == "com.apple.FSKit" OR process == "fskitd" OR process CONTAINS "MounteeFSKit"' \
     > "$OUT/fskit.log" 2>&1 || true
 
 echo "diagnostics written to $OUT"

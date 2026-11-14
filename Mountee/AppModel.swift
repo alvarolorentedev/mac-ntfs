@@ -51,10 +51,11 @@ final class AppModel: ObservableObject {
             case .notRegistered: state = "Not registered"
             case nil: state = "Unknown"
             }
+            let migrationWarning = state == "Enabled" ? ModuleEnabler.migrateLegacyEntryIfNeeded() : nil
             DispatchQueue.main.async {
                 self?.extensionState = state
                 if state == "Enabled" {
-                    self?.lastMessage = nil
+                    self?.lastMessage = migrationWarning
                 }
             }
         }
@@ -68,6 +69,9 @@ final class AppModel: ObservableObject {
                 case .enabled:
                     self?.extensionState = "Enabled"
                     self?.lastMessage = nil
+                case .enabledWithWarning(let warning):
+                    self?.extensionState = "Enabled"
+                    self?.lastMessage = warning
                 case .failed(let message):
                     self?.lastMessage = message
                 case .notRegistered:

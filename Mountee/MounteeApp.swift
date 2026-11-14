@@ -9,11 +9,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 }
 
 @main
-struct MacNTFSApp: App {
+struct MounteeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var model: AppModel
 
     init() {
+        Diagnostics.migrateLegacyReports()
         CLI.handle(arguments: CommandLine.arguments)
         let model = AppModel()
         _model = StateObject(wrappedValue: model)
@@ -23,13 +24,13 @@ struct MacNTFSApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra("MacNTFS", systemImage: "externaldrive") {
+        MenuBarExtra("Mountee", systemImage: "externaldrive") {
             MenuView(model: model)
                 .onAppear { model.start() }
         }
         .menuBarExtraStyle(.window)
 
-        Window("MacNTFS", id: "main") {
+        Window("Mountee", id: "main") {
             MenuView(model: model)
                 .onAppear { model.start() }
         }
@@ -37,11 +38,11 @@ struct MacNTFSApp: App {
     }
 }
 
-/// On first launch, offer to add MacNTFS to Login Items, defaulting to yes.
+/// On first launch, offer to add Mountee to Login Items, defaulting to yes.
 /// Asked at most once; a later change is made with the menu toggle. Skipped
 /// when the login item is already registered.
 private func offerLaunchAtLoginIfNeeded(model: AppModel) {
-    let key = "MacNTFSDidOfferLaunchAtLogin"
+    let key = "MounteeDidOfferLaunchAtLogin"
     let defaults = UserDefaults.standard
     guard !defaults.bool(forKey: key) else { return }
     defaults.set(true, forKey: key)
@@ -50,8 +51,8 @@ private func offerLaunchAtLoginIfNeeded(model: AppModel) {
     NSApp.activate(ignoringOtherApps: true)
     let alert = NSAlert()
     alert.alertStyle = .informational
-    alert.messageText = "Open MacNTFS at login?"
-    alert.informativeText = "MacNTFS can open automatically when you log in, so your NTFS drives are ready without launching the app. You can change this any time from the MacNTFS menu."
+    alert.messageText = "Open Mountee at login?"
+    alert.informativeText = "Mountee can open automatically when you log in, so your NTFS drives are ready without launching the app. You can change this any time from the Mountee menu."
     alert.addButton(withTitle: "Add to Login Items")
     alert.addButton(withTitle: "Not Now")
     if alert.runModal() == .alertFirstButtonReturn {

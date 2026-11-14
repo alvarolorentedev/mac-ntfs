@@ -20,10 +20,12 @@ import Foundation
 /// Mechanism described in Apple's documentation only as "enable in System
 /// Settings"; the same approach is used by other open-source FSKit drivers.
 enum ModuleEnabler {
-    static let moduleID = "com.github.alvarolorentedev.macntfs.ntfsmodule"
+    static let moduleID = "app.mountee.fskit"
+    static let legacyModuleID = "com.github.alvarolorentedev.macntfs.ntfsmodule"
 
     enum Outcome: Equatable {
         case enabled
+        case enabledWithWarning(String)
         case notRegistered
         case failed(String)
     }
@@ -39,7 +41,7 @@ enum ModuleEnabler {
     /// module as enabled.
     static func enable(timeout: TimeInterval = 15) -> Outcome {
         if isEnabled() == .enabled {
-            return .enabled
+            return enabledOutcomeAfterMigration()
         }
         let daemonError = FSKitDaemonEnablement.requestEnable(identifier: moduleID)
         if let daemonError {
@@ -54,7 +56,7 @@ enum ModuleEnabler {
         while Date() < deadline {
             switch isEnabled() {
             case .enabled:
-                return .enabled
+                return enabledOutcomeAfterMigration()
             case nil:
                 return .failed("FSKit did not answer while checking module state.")
             case .disabled, .notRegistered:
@@ -65,6 +67,26 @@ enum ModuleEnabler {
             return .failed("Enablement request was refused (\(daemonError)) and FSKit still reports the extension as disabled.")
         }
         return .failed("The module is listed but FSKit still reports the extension as disabled.")
+    }
+
+    /// Removes the old module only after the replacement is active. On an
+    /// unreadable list, the old entry stays untouched and the app reports it.
+    static func migrateLegacyEntryIfNeeded() -> String? {
+        guard isEnabled() == .enabled else { return nil }
+        do {
+            guard try replaceLegacyEntry() else { return nil }
+            restartAgent()
+            return nil
+        } catch {
+            return "Mountee is enabled, but the old FSKit entry could not be replaced: \(error.localizedDescription). The old entry was kept; retry after confirming Mountee is enabled in System Settings."
+        }
+    }
+
+    private static func enabledOutcomeAfterMigration() -> Outcome {
+        if let warning = migrateLegacyEntryIfNeeded() {
+            return .enabledWithWarning(warning)
+        }
+        return .enabled
     }
 
     enum EnabledState: Equatable {
@@ -108,7 +130,7 @@ enum ModuleEnabler {
             guard let existing = plist as? [String] else {
                 // Never overwrite a list we do not understand: it may hold
                 // other modules' enablement.
-                throw NSError(domain: "MacNTFS", code: 1, userInfo: [
+                throw NSError(domain: "Mountee", code: 1, userInfo: [
                     NSLocalizedDescriptionKey: "the existing FSKit enablement list has an unexpected format",
                 ])
             }
@@ -122,6 +144,35 @@ enum ModuleEnabler {
         modules.append(moduleID)
         let data = try PropertyListSerialization.data(fromPropertyList: modules, format: format, options: 0)
         try data.write(to: url, options: .atomic)
+    }
+
+    /// Replaces legacy occurrences in place, preserving every unrelated entry
+    /// and refusing to rewrite a plist whose format is unknown.
+    private static func replaceLegacyEntry() throws -> Bool {
+        let url = listURL
+        guard FileManager.default.fileExists(atPath: url.path) else { return false }
+
+        var format = PropertyListSerialization.PropertyListFormat.binary
+        let data = try Data(contentsOf: url)
+        let plist = try PropertyListSerialization.propertyList(from: data, options: [], format: &format)
+        guard let modules = plist as? [String] else {
+            throw NSError(domain: "Mountee", code: 2, userInfo: [
+                NSLocalizedDescriptionKey: "the existing FSKit enablement list has an unexpected format",
+            ])
+        }
+        guard let updated = replacingLegacyModuleIDs(in: modules) else { return false }
+        let updatedData = try PropertyListSerialization.data(fromPropertyList: updated, format: format, options: 0)
+        try updatedData.write(to: url, options: .atomic)
+        return true
+    }
+
+    static func replacingLegacyModuleIDs(in modules: [String]) -> [String]? {
+        guard let firstLegacyIndex = modules.firstIndex(of: legacyModuleID) else { return nil }
+        var updated = modules.filter { $0 != legacyModuleID }
+        if !updated.contains(moduleID) {
+            updated.insert(moduleID, at: min(firstLegacyIndex, updated.count))
+        }
+        return updated
     }
 
     /// SIGKILLs the user's `fskit_agent`; launchd respawns it on the next FSKit

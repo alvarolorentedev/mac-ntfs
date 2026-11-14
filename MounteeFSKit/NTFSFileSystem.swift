@@ -10,7 +10,7 @@ import os
 /// volume then mounts read-only and logs it.
 final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
     private static let oemID: [UInt8] = Array("NTFS    ".utf8)
-    private let logger = Logger(subsystem: "com.github.alvarolorentedev.macntfs.ntfsmodule", category: "fileSystem")
+    private let logger = Logger(subsystem: "app.mountee.fskit", category: "fileSystem")
     /// FSKit's check flow loads the resource before asking for a check and then
     /// reuses the same container for the mount; keep the volume so the bridge
     /// is opened exactly once per resource. Keyed on the resource: a second
@@ -66,7 +66,7 @@ final class NTFSFileSystem: FSUnaryFileSystem, FSUnaryFileSystemOperations {
         // (used by the app through FSClient). Read/write is therefore the
         // default, and the bridge refuses it whenever the volume is dirty or
         // hibernated, downgrading to read-only with a logged reason. The
-        // MacNTFS app itself always requests read-only unless the user
+        // Mountee itself always requests read-only unless the user
         // explicitly chooses read/write.
         var readOnly = forceLoad
         for option in options.taskOptions {
@@ -147,17 +147,17 @@ extension NTFSFileSystem: FSManageableResourceMaintenanceOperations {
     func startCheck(task: FSTask, options: FSTaskOptions) throws -> Progress {
         let joinedOptions = options.taskOptions.joined(separator: " ").lowercased()
         if joinedOptions.contains("y") {
-            let message = "MacNTFS does not repair NTFS volumes; use Windows chkdsk for repairs. No changes were made."
+            let message = "Mountee does not repair NTFS volumes; use Windows chkdsk for repairs. No changes were made."
             task.logMessage(message)
             throw NSError(domain: NSPOSIXErrorDomain, code: Int(ENOTSUP),
                           userInfo: [NSLocalizedDescriptionKey: message])
         }
         guard !volumesByResource.isEmpty else {
-            let message = "MacNTFS preflight found no loaded volume for this resource."
+            let message = "Mountee preflight found no loaded volume for this resource."
             task.logMessage(message)
             throw NSError(domain: NSPOSIXErrorDomain, code: Int(ENXIO))
         }
-        task.logMessage("MacNTFS preflight: the NTFS volume opened successfully. Read-only verification only; no repairs or disk writes were performed.")
+        task.logMessage("Mountee preflight: the NTFS volume opened successfully. Read-only verification only; no repairs or disk writes were performed.")
         let progress = Progress(totalUnitCount: 1)
         progress.completedUnitCount = 1
         task.didComplete(error: nil)
@@ -165,7 +165,7 @@ extension NTFSFileSystem: FSManageableResourceMaintenanceOperations {
     }
 
     func startFormat(task: FSTask, options: FSTaskOptions) throws -> Progress {
-        let message = "MacNTFS never formats NTFS volumes."
+        let message = "Mountee never formats NTFS volumes."
         task.logMessage(message)
         throw NSError(domain: NSPOSIXErrorDomain, code: Int(ENOTSUP),
                       userInfo: [NSLocalizedDescriptionKey: message])

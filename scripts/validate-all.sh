@@ -27,6 +27,8 @@ run_step() {
 }
 
 run_step "min-OS floor check" "$REPO_ROOT/scripts/check-min-os.sh"
+run_step "diagnostics migration checks" "$REPO_ROOT/scripts/test-diagnostics-migration.sh"
+run_step "FSKit list migration checks" "$REPO_ROOT/scripts/test-module-enabler-migration.sh"
 run_step "engine tests" "$REPO_ROOT/scripts/run-engine-tests.sh"
 run_step "M3 mounted read/write gate" "$REPO_ROOT/scripts/m3-mount-test.sh"
 run_step "M4 app mount/unmount/eject gate" "$REPO_ROOT/scripts/m4-mount-test.sh"

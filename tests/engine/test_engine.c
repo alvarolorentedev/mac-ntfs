@@ -350,7 +350,7 @@ static void test_windows_names_case_and_cookies(const char *image)
     }
 
     const char *label = ntfs_bridge_volume_name(bridge);
-    CHECK(label && strcmp(label, "MacNTFSTest") == 0, "volume label is reported (%s)",
+    CHECK(label && strcmp(label, "MounteeTest") == 0, "volume label is reported (%s)",
           label ? label : "(null)");
 
     CHECK(ntfs_bridge_create(bridge, "/MiXeD.txt", false) == NTFS_BRIDGE_OK, "create MiXeD.txt");

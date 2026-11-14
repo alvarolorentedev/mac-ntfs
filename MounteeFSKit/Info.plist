@@ -23,7 +23,7 @@
 		<key>EXExtensionPointIdentifier</key>
 		<string>com.apple.fskit.fsmodule</string>
 		<key>FSShortName</key>
-		<string>macntfs</string>
+		<string>mountee</string>
 		<key>FSSupportsBlockResources</key>
 		<true/>
 		<key>FSSupportsGenericURLResources</key>
@@ -53,10 +53,10 @@
 		</dict>
 		<key>FSPersonalities</key>
 		<dict>
-			<key>MacNTFS</key>
+			<key>Mountee</key>
 			<dict>
 				<key>FSName</key>
-				<string>NTFS (MacNTFS)</string>
+				<string>NTFS (Mountee)</string>
 				<key>FSSubType</key>
 				<integer>0</integer>
 				<key>FSfileObjectsAreCaseSensitive</key>

@@ -10,8 +10,8 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP_BUNDLE="$REPO_ROOT/build/DerivedData/Build/Products/Debug/MacNTFS.app"
-APP="$APP_BUNDLE/Contents/MacOS/MacNTFS"
+APP_BUNDLE="$REPO_ROOT/build/DerivedData/Build/Products/Debug/Mountee.app"
+APP="$APP_BUNDLE/Contents/MacOS/mountee"
 OUT="$REPO_ROOT/build/tests"
 IMG="$OUT/m4-cli.img"
 failures=0
@@ -102,7 +102,7 @@ if [ -n "$MOUNT_POINT" ] && mount | grep -q -- "$MOUNT_POINT"; then
 else
     fail "read-write mount failed: $(cat /tmp/m4-mount-err.txt)"
 fi
-if echo "macntfs" > "$MOUNT_POINT/cli-note.txt" 2>/dev/null; then
+if echo "mountee" > "$MOUNT_POINT/cli-note.txt" 2>/dev/null; then
     pass "wrote cli-note.txt"
 else
     fail "write failed on read-write mount"
@@ -111,7 +111,7 @@ fi
 
 note "5. read-only remount verifies persistence"
 MOUNT_POINT="$("$APP" --mount "$BSD" 2>/dev/null)"
-if [ -f "$MOUNT_POINT/cli-note.txt" ] && [ "$(cat "$MOUNT_POINT/cli-note.txt")" = "macntfs" ]; then
+if [ -f "$MOUNT_POINT/cli-note.txt" ] && [ "$(cat "$MOUNT_POINT/cli-note.txt")" = "mountee" ]; then
     pass "file persisted across remount"
 else
     fail "file missing or corrupted after remount"

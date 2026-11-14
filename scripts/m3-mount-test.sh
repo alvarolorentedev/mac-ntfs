@@ -14,7 +14,7 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="$REPO_ROOT/build/DerivedData/Build/Products/Debug/MacNTFS.app"
+APP="$REPO_ROOT/build/DerivedData/Build/Products/Debug/Mountee.app"
 ENGINE_TESTS="$REPO_ROOT/build/tests/engine_tests"
 OUT="$REPO_ROOT/build/tests"
 MOUNTPOINT="${MOUNTPOINT:-$REPO_ROOT/build/mnt}"
@@ -54,12 +54,12 @@ mount_volume() {
     local device="$1"
     shift
     mkdir -p "$MOUNTPOINT"
-    if mount -F -t macntfs "$@" "$device" "$MOUNTPOINT" 2>/dev/null; then
+    if mount -F -t mountee "$@" "$device" "$MOUNTPOINT" 2>/dev/null; then
         return 0
     fi
     if sudo -n true 2>/dev/null; then
         SUDO="sudo -n"
-        $SUDO mount -F -t macntfs "$@" "$device" "$MOUNTPOINT"
+        $SUDO mount -F -t mountee "$@" "$device" "$MOUNTPOINT"
         return $?
     fi
     return 1
@@ -112,7 +112,7 @@ if mount_volume "$DEV"; then
     dd if=/dev/urandom of="$MOUNTPOINT/hello-dir/blob.bin" bs=64k count=16 2>/dev/null \
         && pass "write 1 MiB" || fail "write 1 MiB"
     EXPECT_HASH="$(shasum -a 256 "$MOUNTPOINT/hello-dir/blob.bin" 2>/dev/null | awk '{print $1}')"
-    echo "macntfs" > "$MOUNTPOINT/note.txt" && pass "write note.txt" || fail "write note.txt"
+    echo "mountee" > "$MOUNTPOINT/note.txt" && pass "write note.txt" || fail "write note.txt"
     mv "$MOUNTPOINT/note.txt" "$MOUNTPOINT/renamed.txt" && pass "rename" || fail "rename"
     [ -f "$MOUNTPOINT/renamed.txt" ] && pass "renamed file present" || fail "renamed file missing"
     rm "$MOUNTPOINT/renamed.txt" && pass "unlink" || fail "unlink"

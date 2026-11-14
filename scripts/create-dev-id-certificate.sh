@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Creates a dedicated Developer ID Application certificate for MacNTFS.
+# Creates a dedicated Developer ID Application certificate for Mountee.
 #
 # Portal flow (no Xcode, no Account Holder API key, no Keychain export):
 #
@@ -24,7 +24,7 @@
 #   OUT_DIR      where key/CSR/p12 live (default ~/.secrets/mac-ntfs)
 #   P12_PASSWORD (optional; generated and printed once when unset)
 #   UPLOAD=1     upload DEVELOPER_ID_P12 / DEVELOPER_ID_P12_PASSWORD secrets
-#   GH_REPO      repository for UPLOAD (default alvarolorentedev/mac-ntfs)
+#   GH_REPO      repository for UPLOAD (default alvarolorentedev/mountee)
 #
 set -euo pipefail
 
@@ -33,7 +33,7 @@ TEAM_ID="${TEAM_ID:-D8UFJKPSQP}"
 TEAM_NAME="${TEAM_NAME:-Alvaro Jose Lorente Perez}"
 OUT_DIR="${OUT_DIR:-$HOME/.secrets/mac-ntfs}"
 UPLOAD="${UPLOAD:-0}"
-GH_REPO="${GH_REPO:-alvarolorentedev/mac-ntfs}"
+GH_REPO="${GH_REPO:-alvarolorentedev/mountee}"
 MODE="${MODE:-csr}"
 
 KEY="$OUT_DIR/key.pem"

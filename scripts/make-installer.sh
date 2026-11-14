@@ -16,7 +16,7 @@ set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIG="${CONFIG:-Release}"
-APP="${APP:-$REPO_ROOT/build/DerivedData/Build/Products/$CONFIG/MacNTFS.app}"
+APP="${APP:-$REPO_ROOT/build/DerivedData/Build/Products/$CONFIG/Mountee.app}"
 OUT_DIR="${OUT_DIR:-$REPO_ROOT/build/installer}"
 NOTARIZE="${NOTARIZE:-auto}"
 
@@ -35,7 +35,7 @@ fi
 
 VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist" 2>/dev/null || echo "0.0.0")"
 mkdir -p "$OUT_DIR"
-DMG="$OUT_DIR/MacNTFS-$VERSION.dmg"
+DMG="$OUT_DIR/Mountee-$VERSION.dmg"
 
 notarize=0
 case "$NOTARIZE" in
@@ -75,7 +75,7 @@ notarytool_submit() {
 }
 
 if [ "$notarize" = 1 ]; then
-    ZIP="$OUT_DIR/MacNTFS-$VERSION.zip"
+    ZIP="$OUT_DIR/Mountee-$VERSION.zip"
     rm -f "$ZIP"
     echo "==> packaging app for notarization"
     ditto -c -k --keepParent "$APP" "$ZIP"
@@ -91,25 +91,28 @@ fi
 STAGE="$(mktemp -d)"
 trap 'rm -rf "$STAGE"' EXIT
 echo "==> staging"
-cp -R "$APP" "$STAGE/MacNTFS.app"
+cp -R "$APP" "$STAGE/Mountee.app"
 ln -s /Applications "$STAGE/Applications"
 cat > "$STAGE/Read Me.txt" <<TXT
-MacNTFS $VERSION
+Mountee $VERSION
 
-1. Drag MacNTFS.app to the Applications folder.
-2. Launch it and press "Enable File System Extension" (menu bar -> drive icon).
-3. Plug in an NTFS disk. It appears in /Volumes and in the MacNTFS menu,
+1. If upgrading, quit and remove /Applications/MacNTFS.app. Then drag
+   Mountee.app to Applications.
+2. Launch it, enable the new FSKit extension, and add it to Login Items again
+   when prompted. Old diagnostic reports are copied without deleting originals.
+3. Plug in an NTFS disk. It appears in /Volumes and in the Mountee menu,
    mounted read-only until you explicitly choose "Mount Read/Write".
 
 Safety: dirty volumes and volumes hibernated by Windows (Fast Startup) are
-always mounted read-only. MacNTFS never formats or repairs disks.
+always mounted read-only. Mountee never formats or repairs disks.
 
-Source and documentation: https://github.com/alvarolorentedev/mac-ntfs
+Website: https://mountee.app
+Source and documentation: https://github.com/alvarolorentedev/mountee
 TXT
 
 echo "==> creating DMG"
 rm -f "$DMG"
-hdiutil create -quiet -volname "MacNTFS" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
+hdiutil create -quiet -volname "Mountee" -srcfolder "$STAGE" -ov -format UDZO "$DMG"
 
 echo "==> signing the DMG"
 SIGN_IDENTITY="${SIGN_IDENTITY:-Developer ID Application}"

@@ -10,13 +10,17 @@ enum CLI {
         if arguments.contains("--enable-extension") {
             switch ModuleEnabler.enable() {
             case .enabled:
-                print("MacNTFS: extension enabled")
+                print("Mountee: extension enabled")
+                exit(0)
+            case .enabledWithWarning(let warning):
+                fputs("Mountee: warning: \(warning)\n", stderr)
+                print("Mountee: extension enabled")
                 exit(0)
             case .notRegistered:
-                print("MacNTFS: extension is not registered; run the app once first")
+                print("Mountee: extension is not registered; run the app once first")
                 exit(1)
             case .failed(let message):
-                fputs("MacNTFS: \(message)\n", stderr)
+                fputs("Mountee: \(message)\n", stderr)
                 exit(1)
             }
         }
@@ -45,19 +49,19 @@ enum CLI {
 
         if arguments.contains("--enable-login-item") {
             if let error = LaunchAtLogin.setEnabled(true) {
-                fputs("MacNTFS: \(error)\n", stderr)
+                fputs("Mountee: \(error)\n", stderr)
                 exit(1)
             }
-            print("MacNTFS: login item enabled")
+            print("Mountee: login item enabled")
             exit(0)
         }
 
         if arguments.contains("--disable-login-item") {
             if let error = LaunchAtLogin.setEnabled(false) {
-                fputs("MacNTFS: \(error)\n", stderr)
+                fputs("Mountee: \(error)\n", stderr)
                 exit(1)
             }
-            print("MacNTFS: login item disabled")
+            print("Mountee: login item disabled")
             exit(0)
         }
 

@@ -29,13 +29,13 @@ VM="${2:-}"
 KEEP=0
 [ "${3:-}" = "--keep" ] && KEEP=1
 [ "${2:-}" = "--keep" ] && { KEEP=1; VM=""; }
-[ -z "$VM" ] && VM="macntfs-validate-$(date +%s)"
+[ -z "$VM" ] && VM="mountee-validate-$(date +%s)"
 
-APP_HOST="$REPO_ROOT/build/DerivedData/Build/Products/Debug/MacNTFS.app"
+APP_HOST="$REPO_ROOT/build/DerivedData/Build/Products/Debug/Mountee.app"
 ENGINE_HOST="$REPO_ROOT/build/tests/engine_tests"
-MODULE_ID="com.github.alvarolorentedev.macntfs.ntfsmodule"
-GUEST_TMP="/tmp/macntfs-validate"
-GUEST_MNT='$HOME/macntfs-validate-mnt'
+MODULE_ID="app.mountee.fskit"
+GUEST_TMP="/tmp/mountee-validate"
+GUEST_MNT='$HOME/mountee-validate-mnt'
 
 step() { printf '\n== %s\n' "$1"; }
 failures=0
@@ -63,7 +63,7 @@ else
         tart clone "$IMAGE" "$VM" || exit 1
         created=1
     fi
-    nohup tart run "$VM" --no-graphics --dir="macntfs:$REPO_ROOT" \
+    nohup tart run "$VM" --no-graphics --dir="mountee:$REPO_ROOT" \
         >"/tmp/tart-$VM.log" 2>&1 &
     for _ in $(seq 1 60); do
         tart exec "$VM" true >/dev/null 2>&1 && break
@@ -94,9 +94,9 @@ printf 'guest: macOS %s (%s)\n' "$OS_VERSION" "$OS_BUILD"
 
 # --- Shared folder and sudo -------------------------------------------------
 
-SHARE="$(gex 'ls -d "/Volumes/My Shared Files"/*/MacNTFS.xcodeproj 2>/dev/null | head -1' | sed 's|/MacNTFS.xcodeproj$||')"
+SHARE="$(gex 'ls -d "/Volumes/My Shared Files"/*/Mountee.xcodeproj 2>/dev/null | head -1' | sed 's|/Mountee.xcodeproj$||')"
 if [ -z "$SHARE" ]; then
-    echo "error: repo share not found in the guest; start the VM with --dir=macntfs:$REPO_ROOT" >&2
+    echo "error: repo share not found in the guest; start the VM with --dir=mountee:$REPO_ROOT" >&2
     exit 1
 fi
 printf 'share: %s\n' "$SHARE"
@@ -108,16 +108,16 @@ fi
 # --- Install, register, enable ----------------------------------------------
 
 step "installing and enabling the extension"
-gex "sudo rm -rf /Applications/MacNTFS.app && sudo ditto \"$SHARE/build/DerivedData/Build/Products/Debug/MacNTFS.app\" /Applications/MacNTFS.app && codesign --verify --strict /Applications/MacNTFS.app" \
+gex "sudo rm -rf /Applications/MacNTFS.app /Applications/Mountee.app && sudo ditto \"$SHARE/build/DerivedData/Build/Products/Debug/Mountee.app\" /Applications/Mountee.app && codesign --verify --strict /Applications/Mountee.app" \
     || { echo "error: app install/codesign failed" >&2; exit 1; }
-gex 'open /Applications/MacNTFS.app; sleep 6; pkill -x MacNTFS; true'
-gex '/Applications/MacNTFS.app/Contents/MacOS/MacNTFS --enable-extension' || true
+gex 'open /Applications/Mountee.app; sleep 6; pkill -x mountee; true'
+gex '/Applications/Mountee.app/Contents/MacOS/mountee --enable-extension' || true
 # On 26, the FSKit enabled-list plist is authoritative; pluginkit is kept as a
 # belt-and-braces fallback.
 gex "pluginkit -e use -i $MODULE_ID >/dev/null 2>&1; true"
 gex 'sudo killall -9 fskitd fskit_agent 2>/dev/null; true'
 sleep 2
-STATUS="$(gex '/Applications/MacNTFS.app/Contents/MacOS/MacNTFS --extension-status 2>&1')"
+STATUS="$(gex '/Applications/Mountee.app/Contents/MacOS/mountee --extension-status 2>&1')"
 printf 'extension status: %s\n' "$STATUS"
 
 # --- Engine tests ------------------------------------------------------------
@@ -147,9 +147,9 @@ echo "$M4_OUT" | grep -q "M4 GATE: PASSED" || failures=$((failures + 1))
 # --- Evidence ----------------------------------------------------------------
 
 step "volume adapter actually used"
-gex 'log show --last 45m --predicate "process == \"NTFSModule\"" --style compact 2>/dev/null | grep -c "using the legacy FSVolume.Operations adapter" || true' \
+gex 'log show --last 45m --predicate "process == \"MounteeFSKit\"" --style compact 2>/dev/null | grep -c "using the legacy FSVolume.Operations adapter" || true' \
     | sed 's/^/V1 (FSVolume.Operations) loads: /'
-gex 'log show --last 45m --predicate "process == \"NTFSModule\"" --style compact 2>/dev/null | grep -c "using the macOS 27+ FSVolume.Handler adapter" || true' \
+gex 'log show --last 45m --predicate "process == \"MounteeFSKit\"" --style compact 2>/dev/null | grep -c "using the macOS 27+ FSVolume.Handler adapter" || true' \
     | sed 's/^/V3 (FSVolume.Handler) loads:    /'
 
 if [ "$failures" -ne 0 ]; then

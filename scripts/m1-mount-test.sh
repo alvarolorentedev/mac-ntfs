@@ -9,9 +9,9 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP="$REPO_ROOT/build/DerivedData/Build/Products/Debug/MacNTFS.app"
-APPEX="$APP/Contents/Extensions/NTFSModule.appex"
-MODULE_ID="com.github.alvarolorentedev.macntfs.ntfsmodule"
+APP="$REPO_ROOT/build/DerivedData/Build/Products/Debug/Mountee.app"
+APPEX="$APP/Contents/Extensions/MounteeFSKit.appex"
+MODULE_ID="app.mountee.fskit"
 MOUNTPOINT="${MOUNTPOINT:-$REPO_ROOT/build/mnt}"
 IMG="$REPO_ROOT/build/test-images/ntfs-test-64mb.img"
 ENABLED_PLIST="$HOME/Library/Group Containers/group.com.apple.fskit.settings/enabledModules.plist"
@@ -39,22 +39,22 @@ fi
 
 note "registration"
 pluginkit -a "$APPEX" 2>&1 || true
-pluginkit -m -p com.apple.fskit.fsmodule -vv 2>&1 | grep -A8 -i macntfs || echo "(module not visible to pluginkit yet)"
+pluginkit -m -p com.apple.fskit.fsmodule -vv 2>&1 | grep -A8 -i mountee || echo "(module not visible to pluginkit yet)"
 
 note "enablement"
-if "$APP/Contents/MacOS/MacNTFS" --enable-extension; then
+if "$APP/Contents/MacOS/mountee" --enable-extension; then
     echo "extension enabled"
 else
     echo "direct enablement failed (expected when this script runs under a sandbox)"
     echo "falling back to LaunchServices (unsandboxed context)"
     open -n "$APP" --args --enable-extension 2>/dev/null || true
     sleep 8
-    if [ "$("$APP/Contents/MacOS/MacNTFS" --extension-status 2>/dev/null)" = "enabled" ]; then
+    if [ "$("$APP/Contents/MacOS/mountee" --extension-status 2>/dev/null)" = "enabled" ]; then
         echo "extension enabled (via LaunchServices)"
     else
         echo "automatic enablement failed"
         echo "fallback: open the app and press 'Enable Extension', or run:"
-        echo "  \"$APP/Contents/MacOS/MacNTFS\" --enable-extension"
+        echo "  \"$APP/Contents/MacOS/mountee\" --enable-extension"
         echo "alternatively: System Settings -> General -> Login Items & Extensions -> File System Extensions"
     fi
 fi
@@ -76,14 +76,14 @@ fi
 note "mount (read-only default)"
 mkdir -p "$MOUNTPOINT"
 MOUNTED=0
-if mount -F -t macntfs "$DEV" "$MOUNTPOINT"; then
+if mount -F -t mountee "$DEV" "$MOUNTPOINT"; then
     MOUNTED=1
 else
     echo "mount as user failed; retrying with sudo (only if passwordless)"
-    if sudo -n mount -F -t macntfs "$DEV" "$MOUNTPOINT" 2>/dev/null; then
+    if sudo -n mount -F -t mountee "$DEV" "$MOUNTPOINT" 2>/dev/null; then
         MOUNTED=1
     else
-        echo "To retry manually: sudo mount -F -t macntfs $DEV $MOUNTPOINT"
+        echo "To retry manually: sudo mount -F -t mountee $DEV $MOUNTPOINT"
     fi
 fi
 

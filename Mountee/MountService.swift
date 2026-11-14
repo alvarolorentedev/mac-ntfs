@@ -157,7 +157,7 @@ final class MountService {
         if safeName.isEmpty {
             safeName = bsdName
         }
-        let base = home.appendingPathComponent("MacNTFS/Volumes", isDirectory: true)
+        let base = home.appendingPathComponent("Mountee/Volumes", isDirectory: true)
         var mountPoint = base.appendingPathComponent(safeName, isDirectory: true)
         if FileManager.default.fileExists(atPath: mountPoint.path) {
             // Same label on another disk (or a leftover directory): keep the
@@ -172,7 +172,7 @@ final class MountService {
 
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/sbin/mount")
-        var arguments = ["-F", "-t", "macntfs"]
+        var arguments = ["-F", "-t", "mountee"]
         if !readWrite {
             arguments += ["-o", "rdonly"]
         }

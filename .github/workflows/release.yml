@@ -104,7 +104,7 @@ jobs:
           set -euo pipefail
           TAG="${GITHUB_REF_NAME#v}"
           VERSION="$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
-            build/DerivedData/Build/Products/Release/MacNTFS.app/Contents/Info.plist)"
+            build/DerivedData/Build/Products/Release/Mountee.app/Contents/Info.plist)"
           if [ "$TAG" != "$VERSION" ]; then
             echo "error: tag v$TAG does not match app version $VERSION" >&2
             exit 1
@@ -117,7 +117,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
-          name: macntfs-tart-installer
+          name: Mountee-installer
           path: build/installer/*.dmg
           if-no-files-found: error
           retention-days: 7

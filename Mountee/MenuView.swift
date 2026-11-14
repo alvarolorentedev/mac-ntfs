@@ -7,7 +7,7 @@ struct MenuView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                Text("MacNTFS").font(.headline)
+                Text("Mountee").font(.headline)
                 Spacer()
                 Text(model.extensionState)
                     .foregroundStyle(model.extensionState == "Enabled" ? .green : .orange)
@@ -42,7 +42,7 @@ struct MenuView: View {
 
             Divider()
 
-            Toggle("Open MacNTFS at login", isOn: Binding(
+            Toggle("Open Mountee at login", isOn: Binding(
                 get: { model.launchAtLogin },
                 set: { model.setLaunchAtLogin($0) }
             ))

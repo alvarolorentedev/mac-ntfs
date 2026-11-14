@@ -59,7 +59,7 @@ cd "$SRC_DIR"
 # patch documents the upstream bug it fixes (see patches/).
 for patch_file in "$REPO_ROOT"/patches/*.patch; do
     [ -e "$patch_file" ] || continue
-    marker=".macntfs-applied-$(basename "$patch_file")"
+    marker=".mountee-applied-$(basename "$patch_file")"
     if [ ! -f "$marker" ]; then
         echo "==> applying $(basename "$patch_file")"
         patch -p1 --forward --quiet < "$patch_file"
@@ -69,7 +69,7 @@ done
 
 if [ ! -f ./config.h ]; then
     echo "==> configuring (lib + ntfsprogs; FUSE driver disabled)"
-    # --disable-ntfs-3g: never link or build the FUSE driver. MacNTFS calls
+    # --disable-ntfs-3g: never link or build the FUSE driver. Mountee calls
     # libntfs-3g directly from the FSKit module.
     ./configure \
         --disable-ntfs-3g \

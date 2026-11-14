@@ -1,6 +1,6 @@
 # Diagnostics guide
 
-Symptoms observed while building and using MacNTFS, with causes and actions.
+Symptoms observed while building and using Mountee, with causes and actions.
 
 ## "File system extension not found" / module never loads
 
@@ -8,30 +8,29 @@ Symptoms observed while building and using MacNTFS, with causes and actions.
   macOS 26 also had a system bug where the System Settings toggle could not
   enable third-party FSKit modules; macOS 27 fixed it.
 - **Check:** `pluginkit -m -p com.apple.fskit.fsmodule -vv` — the module must
-  appear with `com.github.alvarolorentedev.macntfs.ntfsmodule` and the appex
-  path.
+  appear with `app.mountee.fskit` and the `MounteeFSKit.appex` path.
 - **Action:** launch the app once, then press **Enable File System Extension**
   (or toggle it in System Settings → Login Items & Extensions → File System
-  Extensions). `MacNTFS --extension-status` prints the live state.
+  Extensions). `mountee --extension-status` prints the live state.
 
 ## `extension: Not registered` while `pluginkit` lists the module
 
 - **Cause:** another copy of the app bundle is registered (local build, CI
   runner checkout, an old download). Plug-in registration is per bundle ID and
   the stale path wins; FSKit then reports the module as not registered.
-- **Check:** `pluginkit -m -i com.github.alvarolorentedev.macntfs.ntfsmodule -vv`
+- **Check:** `pluginkit -m -i app.mountee.fskit -vv`
   — compare `Path` with the app you are launching.
 - **Action:** unregister the stale copy and register the real one, then
   re-enable:
   `pluginkit -r <stale-appex>`, `pluginkit -a <appex>`,
-  `pkill -9 -f NTFSModule.appex`, `MacNTFS --enable-extension`.
+  `pkill -9 -f MounteeFSKit.appex`, `mountee --enable-extension`.
 - **Note:** ad-hoc or `COMPILE_ONLY=1` builds cannot be enabled — AMFI kills
   the extension. Always enable a build produced by `scripts/build-signed.sh`.
 
 ## `mount: Module ... is disabled!`
 
 - **Cause:** the per-user FSKit enablement list does not contain the module.
-- **Action:** `MacNTFS --enable-extension` (non-sandboxed app context), or the
+- **Action:** `mountee --enable-extension` (non-sandboxed app context), or the
   UI button.
 
 ## The app or extension is killed (`exit 137`, "Launchd job spawn failed")
@@ -76,7 +75,7 @@ Symptoms observed while building and using MacNTFS, with causes and actions.
   the bridge refuses read/write and mounts read-only. Or the mount was
   requested with `-o rdonly`.
 - **Check:**
-  `log show --last 10m --predicate 'subsystem == "com.github.alvarolorentedev.macntfs.ntfsmodule"'`
+  `log show --last 10m --predicate 'subsystem == "app.mountee.fskit"'`
   — notice-level messages include the task options and the downgrade reason.
 - **Action:** boot Windows once and let it shut down cleanly (no Fast Startup
   hibernation), or keep using read-only.
@@ -84,14 +83,27 @@ Symptoms observed while building and using MacNTFS, with causes and actions.
 ## Extension stops reloading new builds
 
 - **Cause:** ExtensionKit keeps an extension process alive after unmount.
-- **Action:** `pkill -9 -f NTFSModule.appex`, then mount again.
+- **Action:** `pkill -9 -f MounteeFSKit.appex`, then mount again.
 
 ## Where the evidence lives
 
-- `MacNTFS --diagnostics <path>` (or **Copy Diagnostics**) writes: extension
+- `mountee --diagnostics <path>` (or **Copy Diagnostics**) writes: extension
   state, fskitd/fskit_agent liveness, registered FSKit modules, the NTFS mount
   table and detected volumes.
 - `scripts/fskit-diagnose.sh` collects the same state plus recent fskitd logs
   into `build/diagnostics/<timestamp>/`.
-- Module logs: subsystem `com.github.alvarolorentedev.macntfs.ntfsmodule`
+- Module logs: subsystem `app.mountee.fskit`
   (notice level is persisted; `log show --info --predicate 'subsystem == ...'`).
+
+## Upgrading from MacNTFS
+
+Mountee uses new app and FSKit identifiers. Quit and remove
+`/Applications/MacNTFS.app`, install `Mountee.app`, then enable the new module.
+After FSKit reports it enabled, the app replaces the old module ID in the
+per-user enabled list and keeps unrelated entries. If that cleanup fails, the
+old entry is left in place and the app shows a warning; resolve any unreadable
+enablement-list or permission issue before retrying. Old diagnostic reports
+are copied to `~/Library/Application Support/Mountee` without overwriting
+or deleting their originals. Existing or active mountpoints are not moved.
+Because the bundle ID changed, add Mountee to Login Items again when
+prompted.

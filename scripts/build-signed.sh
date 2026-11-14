@@ -27,8 +27,8 @@ REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CONFIG="${CONFIG:-Debug}"
 DERIVED_DATA="${DERIVED_DATA:-$REPO_ROOT/build/DerivedData}"
 PROFILE_DIR="${PROFILE_DIR:-$REPO_ROOT/build/profiles}"
-PROJECT="$REPO_ROOT/MacNTFS.xcodeproj"
-SCHEME="MacNTFS"
+PROJECT="$REPO_ROOT/Mountee.xcodeproj"
+SCHEME="Mountee"
 
 if [ "${COMPILE_ONLY:-}" = "1" ]; then
     echo "==> signing mode: compile only (unsigned)"
@@ -38,13 +38,13 @@ if [ "${COMPILE_ONLY:-}" = "1" ]; then
     exit 0
 fi
 
-if [ ! -f "$PROFILE_DIR/MacNTFS-App.provisionprofile" ] && \
+if [ ! -f "$PROFILE_DIR/Mountee-App.provisionprofile" ] && \
    [ -n "${ASC_KEY_PATH:-}" ] && [ -n "${ASC_KEY_ID:-}" ] && [ -n "${ASC_ISSUER_ID:-}" ]; then
     "$REPO_ROOT/scripts/create-dev-id-profiles.sh"
 fi
 
-if [ ! -f "$PROFILE_DIR/MacNTFS-App.provisionprofile" ] || \
-   [ ! -f "$PROFILE_DIR/MacNTFS-Extension.provisionprofile" ]; then
+if [ ! -f "$PROFILE_DIR/Mountee-App.provisionprofile" ] || \
+   [ ! -f "$PROFILE_DIR/Mountee-FSKit.provisionprofile" ]; then
     echo "error: Developer ID profiles not found in $PROFILE_DIR." >&2
     echo "Set ASC_KEY_PATH + ASC_KEY_ID + ASC_ISSUER_ID and run ./scripts/create-dev-id-profiles.sh," >&2
     echo "or set COMPILE_ONLY=1 for an unsigned compilation check." >&2
@@ -66,9 +66,9 @@ done
 # no longer be modified in place (Xcode fails writing the embedded profile
 # with EPERM). Remove the product so the build writes it fresh.
 if [ "$CONFIG" = "Release" ]; then
-    APP_PRODUCT="$DERIVED_DATA/Build/Products/Release/MacNTFS.app"
+    APP_PRODUCT="$DERIVED_DATA/Build/Products/Release/Mountee.app"
     case "$APP_PRODUCT" in
-        */Build/Products/Release/MacNTFS.app)
+        */Build/Products/Release/Mountee.app)
             rm -rf "$APP_PRODUCT"
             ;;
     esac
@@ -79,8 +79,8 @@ xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration "$CONFIG" \
     -derivedDataPath "$DERIVED_DATA" \
     CODE_SIGN_IDENTITY="$SIGN_IDENTITY" build
 
-APP="$DERIVED_DATA/Build/Products/$CONFIG/MacNTFS.app"
-APPEX="$APP/Contents/Extensions/NTFSModule.appex"
+APP="$DERIVED_DATA/Build/Products/$CONFIG/Mountee.app"
+APPEX="$APP/Contents/Extensions/MounteeFSKit.appex"
 
 echo
 echo "==> artifacts"

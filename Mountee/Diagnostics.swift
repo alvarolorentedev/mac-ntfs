@@ -11,7 +11,7 @@ enum Diagnostics {
             lines.append("===== \(title) =====")
         }
 
-        lines.append("MacNTFS diagnostics")
+        lines.append("Mountee diagnostics")
         lines.append("date: \(ISO8601DateFormatter().string(from: Date()))")
         lines.append("macOS: \(ProcessInfo.processInfo.operatingSystemVersionString)")
         lines.append("extension: \(extensionState)")
@@ -48,8 +48,7 @@ enum Diagnostics {
     }
 
     static func write(volumes: [NTFSVolumeInfo], extensionState: String) -> URL? {
-        let directory = FileManager.default.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/MacNTFS", isDirectory: true)
+        let directory = supportDirectory
         do {
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         } catch {
@@ -64,6 +63,44 @@ enum Diagnostics {
         } catch {
             return nil
         }
+    }
+
+    /// Copies prior diagnostic reports on first launch. Originals remain, and
+    /// existing destination files are never overwritten.
+    static func migrateLegacyReports() {
+        let oldDirectory = FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/MacNTFS", isDirectory: true)
+        copyLegacyReports(from: oldDirectory, to: supportDirectory)
+    }
+
+    static func copyLegacyReports(from oldDirectory: URL, to newDirectory: URL) {
+        let manager = FileManager.default
+        guard let reports = try? manager.contentsOfDirectory(at: oldDirectory,
+                                                             includingPropertiesForKeys: nil),
+              !reports.isEmpty else { return }
+
+        do {
+            try manager.createDirectory(at: newDirectory, withIntermediateDirectories: true)
+        } catch {
+            NSLog("Mountee: could not create diagnostics migration folder: %@", error.localizedDescription)
+            return
+        }
+
+        for report in reports where report.lastPathComponent.hasPrefix("diagnostics-") && report.pathExtension == "txt" {
+            let destination = newDirectory.appendingPathComponent(report.lastPathComponent)
+            guard !manager.fileExists(atPath: destination.path) else { continue }
+            do {
+                try manager.copyItem(at: report, to: destination)
+            } catch {
+                NSLog("Mountee: could not copy legacy diagnostic report %@: %@",
+                      report.lastPathComponent, error.localizedDescription)
+            }
+        }
+    }
+
+    private static var supportDirectory: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Library/Application Support/Mountee", isDirectory: true)
     }
 
     static func copyToPasteboard(_ text: String) {

@@ -29,6 +29,6 @@ rm -f "$OUT"
 mkfile -n "${SIZE_MB}m" "$OUT"
 
 SECTORS=$((SIZE_MB * 1024 * 1024 / 512))
-"$MKNTFS" -F -q -L MacNTFSTest -s 512 "$OUT" "$SECTORS"
+"$MKNTFS" -F -q -L MounteeTest -s 512 "$OUT" "$SECTORS"
 
 echo "$OUT"

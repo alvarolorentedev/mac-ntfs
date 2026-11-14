@@ -12,10 +12,10 @@
 set -uo pipefail
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PBXPROJ="$REPO_ROOT/MacNTFS.xcodeproj/project.pbxproj"
+PBXPROJ="$REPO_ROOT/Mountee.xcodeproj/project.pbxproj"
 CONFIG="${CONFIG:-Debug}"
 DERIVED_DATA="${DERIVED_DATA:-$REPO_ROOT/build/DerivedData}"
-APP="$DERIVED_DATA/Build/Products/$CONFIG/MacNTFS.app"
+APP="$DERIVED_DATA/Build/Products/$CONFIG/Mountee.app"
 
 FLOOR="${1:-}"
 if [ -z "$FLOOR" ]; then

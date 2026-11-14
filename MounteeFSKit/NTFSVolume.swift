@@ -64,10 +64,10 @@ class NTFSVolumeBase: FSVolume {
 
     private var bridge: OpaquePointer?
     private let shim: NTFSDeviceShim
-    private let queue = DispatchQueue(label: "com.github.alvarolorentedev.macntfs.bridge")
+    private let queue = DispatchQueue(label: "app.mountee.bridge")
     private var items: [UInt64: NTFSItem] = [:]
     var cachedRoot: NTFSItem?
-    let logger = Logger(subsystem: "com.github.alvarolorentedev.macntfs.ntfsmodule", category: "volume")
+    let logger = Logger(subsystem: "app.mountee.fskit", category: "volume")
 
     init(bridge: OpaquePointer, shim: NTFSDeviceShim, readOnly: Bool, volumeName: String) {
         self.bridge = bridge

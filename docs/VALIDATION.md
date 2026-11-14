@@ -22,7 +22,7 @@ Run in order; each step must pass before the next.
 `./scripts/validate-all.sh` runs the engine, M3 and M4 gates in one go.
 
 Between rebuilds, kill stale extension processes:
-`pkill -9 -f NTFSModule.appex`
+`pkill -9 -f MounteeFSKit.appex`
 
 ### What each gate proves
 
@@ -98,13 +98,13 @@ unsupported. On the only 15.x build available for testing (15.7.7):
 - [ ] Launch the app; the extension shows **Enabled** (enable it if not).
 - [ ] Attach a disposable NTFS image (Disk Utility or `hdiutil`); it appears in
       the menu with name and size.
-- [ ] **Mount Read-Only** → volume appears under `~/Library/MacNTFS/Volumes/`;
+- [ ] **Mount Read-Only** → volume appears under `~/Library/Mountee/Volumes/`;
       Finder cannot create a file in it.
 - [ ] **Unmount**, then **Mount Read/Write** → Finder can create, rename and
       delete files; verify with a second read-only mount afterwards.
 - [ ] **Eject** → the volume disappears from the menu.
 - [ ] **Copy Diagnostics** → clipboard contains the report and the file exists
-      in `~/Library/Application Support/MacNTFS/`.
+      in `~/Library/Application Support/Mountee/`.
 - [ ] Dirty/hibernated behaviour (optional, images): craft with
       `build/tests/engine_tests --make-dirty <image>` and
       `--make-hibernated <image>`, then request **Mount Read/Write** and confirm

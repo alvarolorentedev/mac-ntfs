@@ -1,4 +1,4 @@
-// Creates Developer ID provisioning profiles for both MacNTFS bundle IDs via
+// Creates Developer ID provisioning profiles for both Mountee bundle IDs via
 // the App Store Connect API and writes them to build/profiles/.
 //
 // Run through scripts/create-dev-id-profiles.sh, which requires:
@@ -25,10 +25,10 @@ let teamID = environment["DEVELOPMENT_TEAM"] ?? "D8UFJKPSQP"
 let outputDirectory = URL(fileURLWithPath: environment["PROFILE_DIR"] ?? "build/profiles", isDirectory: true)
 
 struct Targets {
-    let appBundleID = "com.github.alvarolorentedev.macntfs"
-    let extensionBundleID = "com.github.alvarolorentedev.macntfs.ntfsmodule"
-    let appProfileName = "MacNTFS App Developer ID"
-    let extensionProfileName = "MacNTFS Extension Developer ID"
+    let appBundleID = "app.mountee"
+    let extensionBundleID = "app.mountee.fskit"
+    let appProfileName = "Mountee App Developer ID"
+    let extensionProfileName = "Mountee FSKit Developer ID"
 }
 let targets = Targets()
 
@@ -178,8 +178,8 @@ try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDir
 
 let certificateIDs = try findCertificateIDs()
 for (bundleID, profileName, fileName) in [
-    (targets.appBundleID, targets.appProfileName, "MacNTFS-App.provisionprofile"),
-    (targets.extensionBundleID, targets.extensionProfileName, "MacNTFS-Extension.provisionprofile"),
+    (targets.appBundleID, targets.appProfileName, "Mountee-App.provisionprofile"),
+    (targets.extensionBundleID, targets.extensionProfileName, "Mountee-FSKit.provisionprofile"),
 ] {
     let bundleResourceID = try findBundleID(bundleID)
     for existingID in try findExistingProfileIDs(named: profileName) {

@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "0010"
-               BuildableName = "MacNTFS.app"
-               BlueprintName = "MacNTFS"
-               ReferencedContainer = "container:MacNTFS.xcodeproj">
+               BuildableName = "Mountee.app"
+               BlueprintName = "Mountee"
+               ReferencedContainer = "container:Mountee.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "0010"
-            BuildableName = "MacNTFS.app"
-            BlueprintName = "MacNTFS"
-            ReferencedContainer = "container:MacNTFS.xcodeproj">
+            BuildableName = "Mountee.app"
+            BlueprintName = "Mountee"
+            ReferencedContainer = "container:Mountee.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "0010"
-            BuildableName = "MacNTFS.app"
-            BlueprintName = "MacNTFS"
-            ReferencedContainer = "container:MacNTFS.xcodeproj">
+            BuildableName = "Mountee.app"
+            BlueprintName = "Mountee"
+            ReferencedContainer = "container:Mountee.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

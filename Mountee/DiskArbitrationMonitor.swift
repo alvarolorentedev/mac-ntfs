@@ -136,7 +136,7 @@ final class DiskArbitrationMonitor {
     private func isNTFS(_ description: [String: Any]) -> Bool {
         if let kind = description[kDADiskDescriptionVolumeKindKey as String] as? String {
             let normalized = kind.lowercased()
-            if normalized == "ntfs" || normalized == "macntfs" {
+            if normalized == "ntfs" || normalized == "mountee" {
                 return true
             }
         }
