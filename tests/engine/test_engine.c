@@ -393,6 +393,101 @@ static void test_windows_names_case_and_cookies(const char *image)
     CHECK(ntfs_bridge_close(bridge) == NTFS_BRIDGE_OK, "close windows-names test");
 }
 
+/*
+ * Paged enumeration of a directory large enough to live in index allocation
+ * blocks (not just the resident index root). Mirrors NTFSVolumeBase.enumerate:
+ * collect `batch + 1` entries, keep the last one unpacked, and resume from its
+ * cookie (the bridge re-emits the entry at the given cookie).
+ */
+#define PAGED_FILE_COUNT 1000
+
+struct paged_context {
+    int limit;
+    int count;
+    char names[512][64];
+    uint64_t cookies[512];
+};
+
+static bool collect_paged(void *context, const ntfs_bridge_dirent *entry)
+{
+    struct paged_context *page = context;
+    if (page->count < (int)(sizeof(page->names) / sizeof(page->names[0]))) {
+        snprintf(page->names[page->count], sizeof(page->names[0]), "%s", entry->name);
+        page->cookies[page->count] = entry->cookie;
+    }
+    page->count++;
+    return page->count < page->limit;
+}
+
+static int paged_enumerate(ntfs_bridge *bridge, const char *path, int batch, bool *seen,
+                           ntfs_bridge_status *failure)
+{
+    uint64_t cookie = 0;
+    int total = 0;
+    *failure = NTFS_BRIDGE_OK;
+    for (int round = 0; round < 10000; round++) {
+        struct paged_context page = { .limit = batch + 1, .count = 0 };
+        ntfs_bridge_status status = ntfs_bridge_readdir(bridge, path, cookie, collect_paged, &page);
+        if (status != NTFS_BRIDGE_OK) {
+            *failure = status;
+            return total;
+        }
+        bool full = page.count > batch;
+        int packable = full ? page.count - 1 : page.count;
+        for (int i = 0; i < packable; i++) {
+            int index = -1;
+            if (sscanf(page.names[i], "file-%04d.jpg", &index) == 1 && index >= 0 && index < PAGED_FILE_COUNT) {
+                CHECK(!seen[index], "batch %d: %s emitted twice", batch, page.names[i]);
+                seen[index] = true;
+            }
+            total++;
+        }
+        if (!full) {
+            return total;
+        }
+        cookie = page.cookies[page.count - 1];
+    }
+    return total;
+}
+
+static void test_large_directory_paging(const char *image)
+{
+    printf("== large directory paging (%s)\n", image);
+    ntfs_bridge *bridge = open_expect(image, false, false, false, false, "rw-large-dir");
+    if (!bridge) {
+        return;
+    }
+    CHECK(ntfs_bridge_create(bridge, "/big", true) == NTFS_BRIDGE_OK, "mkdir /big");
+    char path[128];
+    for (int i = 0; i < PAGED_FILE_COUNT; i++) {
+        snprintf(path, sizeof(path), "/big/file-%04d.jpg", i);
+        if (ntfs_bridge_create(bridge, path, false) != NTFS_BRIDGE_OK) {
+            CHECK(false, "create %s", path);
+            break;
+        }
+    }
+    CHECK(ntfs_bridge_close(bridge) == NTFS_BRIDGE_OK, "close after populating /big");
+
+    bridge = open_expect(image, true, false, false, false, "ro-large-dir");
+    if (!bridge) {
+        return;
+    }
+    const int batches[] = { 256, 167, 64, 17, 1 };
+    for (size_t b = 0; b < sizeof(batches) / sizeof(batches[0]); b++) {
+        bool seen[PAGED_FILE_COUNT] = { false };
+        ntfs_bridge_status failure = NTFS_BRIDGE_OK;
+        int total = paged_enumerate(bridge, "/big", batches[b], seen, &failure);
+        int missing = 0;
+        for (int i = 0; i < PAGED_FILE_COUNT; i++) {
+            missing += !seen[i];
+        }
+        CHECK(failure == NTFS_BRIDGE_OK, "batch %d: readdir failed after %d entries: %s", batches[b], total,
+              ntfs_bridge_strerror(failure));
+        CHECK(missing == 0, "batch %d: %d of %d entries missing", batches[b], missing, PAGED_FILE_COUNT);
+    }
+    ntfs_bridge_close(bridge);
+}
+
 int main(int argc, char **argv)
 {
     setvbuf(stdout, NULL, _IONBF, 0);
@@ -450,6 +545,7 @@ int main(int argc, char **argv)
     test_hibernated_volume(argv[3]);
     test_lookup_rename_statfs(argv[4]);
     test_windows_names_case_and_cookies(argv[4]);
+    test_large_directory_paging(argv[4]);
 
     printf("\n%d checks, %d failures\n", checks, failures);
     if (failures) {

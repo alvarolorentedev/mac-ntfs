@@ -20,6 +20,10 @@ licenses compatible with this project's GPL-3.0 license.
   are disabled at configure time (`--disable-ntfs-3g`, `--disable-mount-helper`,
   `--disable-mtab`), so no FUSE code is compiled or linked: MacNTFS calls
   libntfs-3g directly from the FSKit extension through `bridge/ntfs_bridge.c`.
+- Modifications: the build applies the patches in `patches/` to the release
+  source before compiling. `ntfs-3g-readdir-bitmap-resume.patch` fixes the
+  index-bitmap bit offset in `ntfs_readdir()` when a directory read resumes
+  inside the index allocation (large directories failed with EIO).
 - Also built, for development only: `mkntfs` from the same source tree, used to
   create disposable test images. It is not shipped or required at runtime.
 
