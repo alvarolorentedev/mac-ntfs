@@ -57,6 +57,9 @@ struct MenuView: View {
                         model.note("Diagnostics copied to the clipboard; saved at \(url.path)")
                     }
                 }
+                Link(destination: URL(string: "https://github.com/sponsors/alvarolorentedev")!) {
+                    Label("Donate", systemImage: "heart")
+                }
                 Spacer()
                 Button("Quit") { NSApplication.shared.terminate(nil) }
             }
