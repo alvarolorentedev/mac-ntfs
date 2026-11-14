@@ -9,7 +9,7 @@ engine, so it mounts NTFS drives with full read/write access from user space:
 nothing to approve in Recovery Mode, nothing to downgrade, nothing left behind
 after you remove it.
 
-Status: **0.3.0** — read/write verified on **macOS 27.0.1** and **macOS 26.6.2**
+Status: **0.3.1** — read/write verified on **macOS 27.0.1** and **macOS 26.6.2**
 (Apple Silicon).
 
 ## Why Mountee
@@ -60,8 +60,8 @@ free, open-source option that gets read/write without either.
 
 ## Install
 
-1. Download `Mountee-<version>.dmg` from the
-   [GitHub releases](../../releases) and open it.
+1. Download [Mountee.dmg](https://github.com/alvarolorentedev/mac-ntfs/releases/latest/download/Mountee.dmg)
+   and open it.
 2. If upgrading, quit and remove `/Applications/MacNTFS.app` first. Drag
    **Mountee.app** to `/Applications` and launch it.
 3. Press **Enable File System Extension** in the menu bar window. Add
@@ -108,7 +108,7 @@ General → Login Items & Extensions → File System Extensions, then delete
 
 ## Maturity and limitations
 
-Mountee is young (0.3.0). The write path is verified with content hashes across
+Mountee is young (0.3.1). The write path is verified with content hashes across
 remounts on disposable images, but treat read/write on valuable disks like any
 new driver: keep backups and try it on non-critical data first. The safety
 gates above are the main protection against the classic NTFS corruption cases.

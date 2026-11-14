@@ -403,7 +403,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.3.1;
 				INFOPLIST_KEY_SUPublicEDKey = "mWNLCI8wSAF4gkrnk2mPEdFVI8tGyBFBDECpTm9HCD4=";
 				PRODUCT_BUNDLE_IDENTIFIER = app.mountee;
 				PRODUCT_NAME = Mountee;
@@ -432,7 +432,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.3.1;
 				INFOPLIST_KEY_SUPublicEDKey = "mWNLCI8wSAF4gkrnk2mPEdFVI8tGyBFBDECpTm9HCD4=";
 				PRODUCT_BUNDLE_IDENTIFIER = app.mountee;
 				PRODUCT_NAME = Mountee;
@@ -472,7 +472,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.3.1;
 				PRODUCT_BUNDLE_IDENTIFIER = app.mountee.fskit;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -514,7 +514,7 @@
 					"@executable_path/../Frameworks",
 					"@executable_path/../../../../Frameworks",
 				);
-				MARKETING_VERSION = 0.3.0;
+				MARKETING_VERSION = 0.3.1;
 				PRODUCT_BUNDLE_IDENTIFIER = app.mountee.fskit;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

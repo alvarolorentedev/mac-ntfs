@@ -35,7 +35,7 @@ fi
 
 VERSION="$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" "$APP/Contents/Info.plist" 2>/dev/null || echo "0.0.0")"
 mkdir -p "$OUT_DIR"
-DMG="$OUT_DIR/Mountee-$VERSION.dmg"
+DMG="$OUT_DIR/Mountee.dmg"
 UPDATE_ZIP="$OUT_DIR/Mountee-$VERSION.zip"
 
 notarize=0

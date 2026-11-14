@@ -106,7 +106,7 @@ mountpoints are not moved; fallback mounts use `~/Library/Mountee/Volumes`.
 ## Installer (CI)
 
 Pushing a version tag builds a Release app, notarizes and staples it, packages
-`Mountee-<version>.dmg` (app + Applications shortcut + quick start) and
+`Mountee.dmg` (app + Applications shortcut + quick start) and
 `Mountee-<version>.zip` (the stapled app for Sparkle), signs an `appcast.xml`,
 and attaches all three assets to the GitHub release. Mountee checks
 `https://github.com/alvarolorentedev/mac-ntfs/releases/latest/download/appcast.xml`;
