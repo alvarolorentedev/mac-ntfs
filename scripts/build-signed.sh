@@ -81,13 +81,23 @@ xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration "$CONFIG" \
 
 APP="$DERIVED_DATA/Build/Products/$CONFIG/Mountee.app"
 APPEX="$APP/Contents/Extensions/MounteeFSKit.appex"
+SPARKLE="$APP/Contents/Frameworks/Sparkle.framework"
+SPARKLE_VERSION="$SPARKLE/Versions/B"
+
+# Xcode signs Sparkle's framework root but leaves its nested helpers unsigned.
+codesign --force --sign "$SIGN_IDENTITY" --timestamp --options runtime "$SPARKLE_VERSION/XPCServices/Installer.xpc"
+codesign --force --sign "$SIGN_IDENTITY" --timestamp --options runtime --preserve-metadata=entitlements "$SPARKLE_VERSION/XPCServices/Downloader.xpc"
+codesign --force --sign "$SIGN_IDENTITY" --timestamp --options runtime "$SPARKLE_VERSION/Autoupdate"
+codesign --force --sign "$SIGN_IDENTITY" --timestamp --options runtime "$SPARKLE_VERSION/Updater.app"
+codesign --force --sign "$SIGN_IDENTITY" --timestamp --options runtime --preserve-metadata=identifier,entitlements,flags,requirements "$SPARKLE"
+codesign --force --sign "$SIGN_IDENTITY" --timestamp --options runtime --preserve-metadata=identifier,entitlements,flags,requirements "$APP"
 
 echo
 echo "==> artifacts"
 echo "    $APP"
 
 echo "==> signature check"
-codesign --verify --strict "$APP"
+codesign --verify --deep --strict "$APP"
 APPEX_ENTITLEMENTS="$(codesign -d --entitlements - "$APPEX" 2>/dev/null || true)"
 APP_ENTITLEMENTS="$(codesign -d --entitlements - "$APP" 2>/dev/null || true)"
 if ! grep -q "com.apple.developer.fskit.fsmodule" <<<"$APPEX_ENTITLEMENTS"; then
