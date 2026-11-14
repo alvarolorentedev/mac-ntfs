@@ -30,9 +30,11 @@ struct MounteeApp: App {
     }
 
     var body: some Scene {
-        MenuBarExtra("Mountee", systemImage: "externaldrive") {
+        MenuBarExtra {
             MenuView(model: model, updaterController: updaterController)
                 .onAppear { model.start() }
+        } label: {
+            Image(nsImage: menuBarIcon)
         }
         .menuBarExtraStyle(.window)
 
@@ -41,6 +43,13 @@ struct MounteeApp: App {
                 .onAppear { model.start() }
         }
         .windowResizability(.contentSize)
+    }
+
+    private var menuBarIcon: NSImage {
+        let image = NSImage(named: "MounteeMenuBar")!
+        image.size = NSSize(width: 18, height: 18)
+        image.isTemplate = true
+        return image
     }
 }
 
